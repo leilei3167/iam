@@ -5,7 +5,7 @@
 package authzserver
 
 import (
-	"github.com/marmotedu/errors"
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/authzserver/load/cache"
 	"github.com/marmotedu/iam/internal/pkg/middleware"

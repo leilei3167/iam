@@ -21,6 +21,8 @@ readonly CERT_HOSTNAME="${CERT_HOSTNAME:-iam.api.marmotedu.com,iam.authz.marmote
 # Args:
 #   $1 (the directory that certificate files to save)
 #   $2 (the prefix of the certificate filename)
+# 此函数是何时被调用? 在本文件末端有 $* ,其被./scripts/gencerts.sh generate-iam-cert ${LOCAL_OUTPUT_ROOT}/cert 调用,相当于是
+# generate-iam-cert ${LOCAL_OUTPUT_ROOT}/cert,两个参数,即会执行generate-iam-cert 函数,并以${LOCAL_OUTPUT_ROOT}/cert为其参数
 function generate-iam-cert() {
   local cert_dir=${1}
   local prefix=${2:-}

@@ -11,8 +11,9 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/avast/retry-go"
 	pb "github.com/marmotedu/api/proto/apiserver/v1"
-	"github.com/marmotedu/errors"
 	"github.com/ory/ladon"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/pkg/log"
 )

@@ -14,7 +14,7 @@ type AuthStrategy interface {
 }
 
 // AuthOperator used to switch between different authentication strategy.
-type AuthOperator struct {
+type AuthOperator struct { // operator也实现了策略接口
 	strategy AuthStrategy
 }
 

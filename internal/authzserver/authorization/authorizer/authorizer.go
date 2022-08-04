@@ -23,7 +23,8 @@ type PolicyGetter interface {
 }
 
 // Authorization implements authorization.AuthorizationInterface interface.
-type Authorization struct {
+type Authorization struct { // 同时实现ladon的日志记录接口,用于实现鉴权日志的记录;
+	// 实现ladon所需要的Manager和AuditLogger接口
 	getter PolicyGetter
 }
 

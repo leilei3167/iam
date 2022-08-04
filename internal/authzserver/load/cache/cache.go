@@ -9,18 +9,20 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	pb "github.com/marmotedu/api/proto/apiserver/v1"
-	"github.com/marmotedu/errors"
 	"github.com/ory/ladon"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/authzserver/store"
 )
 
 // Cache is used to store secrets and policies.
+// 负责管理从grpc调用apiserver时得到的结果,同时实现了Loader接口.
 type Cache struct {
 	lock     *sync.RWMutex
 	cli      store.Factory
-	secrets  *ristretto.Cache
-	policies *ristretto.Cache
+	secrets  *ristretto.Cache // 高性能内存缓存  github.com/dgraph-io/ristretto
+	policies *ristretto.Cache // 可以使用Redis代替
 }
 
 var (
@@ -32,7 +34,7 @@ var (
 
 var (
 	onceCache sync.Once
-	cacheIns  *Cache
+	cacheIns  *Cache // 全局缓存,维护来自apiserver拉取的信息
 )
 
 // GetCacheInsOr return store instance.
@@ -45,6 +47,7 @@ func GetCacheInsOr(cli store.Factory) (*Cache, error) {
 		)
 
 		onceCache.Do(func() {
+			// 创建内存缓存
 			c := &ristretto.Config{
 				NumCounters: 1e7,     // number of keys to track frequency of (10M).
 				MaxCost:     1 << 30, // maximum cost of cache (1GB).
@@ -87,6 +90,7 @@ func (c *Cache) GetSecret(key string) (*pb.SecretInfo, error) {
 }
 
 // GetPolicy return user's ladon policies for the given user.
+// 关键:ladon最终会调用此方法 获取缓存的policy 进行鉴权.
 func (c *Cache) GetPolicy(key string) ([]*ladon.DefaultPolicy, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -100,19 +104,19 @@ func (c *Cache) GetPolicy(key string) ([]*ladon.DefaultPolicy, error) {
 }
 
 // Reload reload secrets and policies.
-func (c *Cache) Reload() error {
+func (c *Cache) Reload() error { // 刷新缓存的操作,全程必须加锁
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	// reload secrets
-	secrets, err := c.cli.Secrets().List()
+	secrets, err := c.cli.Secrets().List() // 使用gRPC客户端调用apiserver,获取所有secrets信息
 	if err != nil {
 		return errors.Wrap(err, "list secrets failed")
 	}
 
-	c.secrets.Clear()
+	c.secrets.Clear() // 清空缓存
 	for key, val := range secrets {
-		c.secrets.Set(key, val, 1)
+		c.secrets.Set(key, val, 1) // 以secretID作为map的Key
 	}
 
 	// reload policies

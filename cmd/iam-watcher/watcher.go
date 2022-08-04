@@ -7,9 +7,10 @@
 package main
 
 import (
-	_ "go.uber.org/automaxprocs"
 	"math/rand"
 	"time"
+
+	_ "go.uber.org/automaxprocs"
 
 	"github.com/marmotedu/iam/internal/watcher"
 )
@@ -19,3 +20,28 @@ func main() {
 
 	watcher.NewApp("iam-watcher").Run()
 }
+
+/*
+IAM系统中的分布式作业系统由Watcher实现
+
+watcher主要负责执行一些定时任务,如定期清理数据库中的数据
+
+	每隔一段时间从 policy_audit 表中清理超过指定天数的授权策略。
+	每隔一段时间禁用超过指定天数没有登录的用户。
+
+	需求:
+	1.分布式的作业系统，当有多个实例时，确保同一时刻只有 1 个实例在工作。(分布式锁)
+	2.跟项目契合紧密，能够方便地复用项目提供的包、函数等能力，提高开发效率。(复用mysql,redis,store.Factory,log等已有代码)
+	3.能够执行定时任务、间隔任务、间隔性定时任务这 3 种类型的任务。
+	4.可插件化地加入新的周期 / 定时任务。(注册机制)
+
+
+重点:
+	1.如何在go中使用corn定时任务
+	围绕watchJob来管理定时的功能模块;其嵌套corn.Corn,并且其还有addWatchers方法,将全局的watcher map中的已注册的watcher初始化后添加到Corn中进行
+	管理(实现了Job接口)
+
+	2.init注册模式
+	需要全局的一个map,以及一个Register方法,在通过import时,每一个watcher都将执行init函数,init函数中会调用Register方法,将自己注册到
+	全局map中,多个不同的watcher必须在不同的包中
+*/

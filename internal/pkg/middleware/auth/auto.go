@@ -9,7 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/marmotedu/component-base/pkg/core"
-	"github.com/marmotedu/errors"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pkg/code"
 	"github.com/marmotedu/iam/internal/pkg/middleware"
@@ -50,7 +51,7 @@ func (a AutoStrategy) AuthFunc() gin.HandlerFunc {
 
 			return
 		}
-
+		// 选择所需的策略
 		switch authHeader[0] {
 		case "Basic":
 			operator.SetStrategy(a.basic)
@@ -63,7 +64,7 @@ func (a AutoStrategy) AuthFunc() gin.HandlerFunc {
 
 			return
 		}
-
+		// 策略执行者返回的是HandlerFunc,并再次传入c调用
 		operator.AuthFunc()(c)
 
 		c.Next()

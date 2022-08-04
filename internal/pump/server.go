@@ -24,12 +24,13 @@ import (
 	"github.com/marmotedu/iam/pkg/log"
 )
 
-var pmps []pumps.Pump
+// 数据采集组件设计的核心是插件化，这里我将需要上报的系统抽象成一个个的 pump.
+var pmps []pumps.Pump // 数据采集插件的切片,可以自由添加多种数据采集的插件
 
 type pumpServer struct {
 	secInterval    int
 	omitDetails    bool
-	mutex          *redsync.Mutex
+	mutex          *redsync.Mutex // 持有分布式锁
 	analyticsStore storage.AnalyticsStorage
 	pumps          map[string]options.PumpConfig
 }
@@ -41,7 +42,7 @@ type preparedPumpServer struct {
 
 func createPumpServer(cfg *config.Config) (*pumpServer, error) {
 	// use the same redis database with authorization log history
-	client := goredislib.NewClient(&goredislib.Options{
+	client := goredislib.NewClient(&goredislib.Options{ // 连接Redis
 		Addr:     fmt.Sprintf("%s:%d", cfg.RedisOptions.Host, cfg.RedisOptions.Port),
 		Username: cfg.RedisOptions.Username,
 		Password: cfg.RedisOptions.Password,
@@ -52,8 +53,8 @@ func createPumpServer(cfg *config.Config) (*pumpServer, error) {
 	server := &pumpServer{
 		secInterval:    cfg.PurgeDelay,
 		omitDetails:    cfg.OmitDetailedRecording,
-		mutex:          rs.NewMutex("iam-pump", redsync.WithExpiry(10*time.Minute)),
-		analyticsStore: &redis.RedisClusterStorageManager{},
+		mutex:          rs.NewMutex("iam-pump", redsync.WithExpiry(10*time.Minute)), // 分布式锁
+		analyticsStore: &redis.RedisClusterStorageManager{},                         // 上游的数据来源依赖注入为Redis
 		pumps:          cfg.Pumps,
 	}
 
@@ -71,7 +72,7 @@ func (s *pumpServer) PrepareRun() preparedPumpServer {
 }
 
 func (s preparedPumpServer) Run(stopCh <-chan struct{}) error {
-	ticker := time.NewTicker(time.Duration(s.secInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(s.secInterval) * time.Second) // 进行数据采集的时间间隔
 	defer ticker.Stop()
 
 	log.Info("Now run loop to clean data from redis")
@@ -80,7 +81,7 @@ func (s preparedPumpServer) Run(stopCh <-chan struct{}) error {
 		case <-ticker.C:
 			s.pump()
 		// exit consumption cycle when receive SIGINT and SIGTERM signal
-		case <-stopCh:
+		case <-stopCh: // 能退出时一定是pump执行完毕的时候
 			log.Info("stop purge loop")
 
 			return nil
@@ -90,7 +91,7 @@ func (s preparedPumpServer) Run(stopCh <-chan struct{}) error {
 
 // pump get authorization log from redis and write to pumps.
 func (s *pumpServer) pump() {
-	if err := s.mutex.Lock(); err != nil {
+	if err := s.mutex.Lock(); err != nil { // TODO:分布式锁?
 		log.Info("there is already an iam-pump instance running.")
 
 		return
@@ -101,7 +102,7 @@ func (s *pumpServer) pump() {
 		}
 	}()
 
-	analyticsValues := s.analyticsStore.GetAndDeleteSet(storage.AnalyticsKeyName)
+	analyticsValues := s.analyticsStore.GetAndDeleteSet(storage.AnalyticsKeyName) // 从Redis中获取信息处理
 	if len(analyticsValues) == 0 {
 		return
 	}
@@ -129,20 +130,20 @@ func (s *pumpServer) pump() {
 }
 
 func (s *pumpServer) initialize() {
-	pmps = make([]pumps.Pump, len(s.pumps))
+	pmps = make([]pumps.Pump, len(s.pumps)) // 全局pump插件
 	i := 0
-	for key, pmp := range s.pumps {
+	for key, pmp := range s.pumps { // 每一个实例对应一个配置
 		pumpTypeName := pmp.Type
 		if pumpTypeName == "" {
-			pumpTypeName = key
+			pumpTypeName = key // type为空则设置为key的名称
 		}
 
-		pmpType, err := pumps.GetPumpByName(pumpTypeName)
+		pmpType, err := pumps.GetPumpByName(pumpTypeName) // 从维护的全局pump插件中查询,是否有此名称的pump插件
 		if err != nil {
 			log.Errorf("Pump load error (skipping): %s", err.Error())
 		} else {
 			pmpIns := pmpType.New()
-			initErr := pmpIns.Init(pmp.Meta)
+			initErr := pmpIns.Init(pmp.Meta) // 将获取到的pump接口初始化,并配置
 			if initErr != nil {
 				log.Errorf("Pump init error (skipping): %s", initErr.Error())
 			} else {
@@ -150,7 +151,7 @@ func (s *pumpServer) initialize() {
 				pmpIns.SetFilters(pmp.Filters)
 				pmpIns.SetTimeout(pmp.Timeout)
 				pmpIns.SetOmitDetailedRecording(pmp.OmitDetailedRecording)
-				pmps[i] = pmpIns
+				pmps[i] = pmpIns // 将配置完毕的pump插件加入到全局的实例切片中
 			}
 		}
 		i++
@@ -162,7 +163,7 @@ func writeToPumps(keys []interface{}, purgeDelay int) {
 	if pmps != nil {
 		var wg sync.WaitGroup
 		wg.Add(len(pmps))
-		for _, pmp := range pmps {
+		for _, pmp := range pmps { // 发送至每个pump,对应多种下游
 			go execPumpWriting(&wg, pmp, &keys, purgeDelay)
 		}
 		wg.Wait()
@@ -227,7 +228,7 @@ func execPumpWriting(wg *sync.WaitGroup, pmp pumps.Pump, keys *[]interface{}, pu
 	go func(ch chan error, ctx context.Context, pmp pumps.Pump, keys *[]interface{}) {
 		filteredKeys := filterData(pmp, *keys)
 
-		ch <- pmp.WriteData(ctx, filteredKeys)
+		ch <- pmp.WriteData(ctx, filteredKeys) // 异步调用写入数据
 	}(ch, ctx, pmp, keys)
 
 	select {

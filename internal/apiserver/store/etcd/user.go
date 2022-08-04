@@ -12,7 +12,8 @@ import (
 	"github.com/marmotedu/component-base/pkg/json"
 	metav1 "github.com/marmotedu/component-base/pkg/meta/v1"
 	"github.com/marmotedu/component-base/pkg/util/jsonutil"
-	"github.com/marmotedu/errors"
+
+	"github.com/marmotedu/iam/pkg/errors"
 )
 
 type users struct {

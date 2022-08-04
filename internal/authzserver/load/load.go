@@ -15,7 +15,7 @@ import (
 )
 
 // Loader defines function to reload storage.
-type Loader interface {
+type Loader interface { // Loader不关心Reload如何实现,只会在特定时间执行Reload方法,因此可以扩展不同的缓存策略
 	Reload() error
 }
 
@@ -37,20 +37,21 @@ func NewLoader(ctx context.Context, loader Loader) *Load {
 
 // Start start a loop service.
 func (l *Load) Start() {
-	go startPubSubLoop()
-	go l.reloadQueueLoop()
+	go startPubSubLoop()   // 订阅Redis,在指定channel得到消息时,执行指定的任务(投入到reloadQueue中)
+	go l.reloadQueueLoop() // 读取reloadQueue中的消息,一旦接收到,将其中的函数加入到一个队列中
 	// 1s is the minimum amount of time between hot reloads. The
 	// interval counts from the start of one reload to the next.
-	go l.reloadLoop()
-	l.DoReload()
+	go l.reloadLoop() // 消费队列中的Reload消息
+
+	l.DoReload() // 立刻先同步一次
 }
 
 func startPubSubLoop() {
-	cacheStore := storage.RedisCluster{}
+	cacheStore := storage.RedisCluster{} // 使用的非cache集群
 	cacheStore.Connect()
 	// On message, synchronize
 	for {
-		err := cacheStore.StartPubSubHandler(RedisPubSubChannel, func(v interface{}) {
+		err := cacheStore.StartPubSubHandler(RedisPubSubChannel, func(v interface{}) { // 订阅Redis的消息,接收到通知时,执行回调
 			handleRedisEvent(v, nil, nil)
 		})
 		if err != nil {
@@ -72,8 +73,8 @@ func shouldReload() ([]func(), bool) {
 	if len(requeue) == 0 {
 		return nil, false
 	}
-	n := requeue
-	requeue = []func(){}
+	n := requeue         // 将本地队列交出执行
+	requeue = []func(){} // 清空
 
 	return n, true
 }
@@ -88,17 +89,17 @@ func (l *Load) reloadLoop(complete ...func()) {
 		// startup sequence. We expect to start checking on the first tick after the
 		// gateway is up and running.
 		case <-ticker.C:
-			cb, ok := shouldReload()
+			cb, ok := shouldReload() // 看队列中是否为空,不为空则执行已获取的函数
 			if !ok {
-				continue
+				continue // 为空,跳过
 			}
-			start := time.Now()
+			start := time.Now() // 不为空,执行刷新缓存
 			l.DoReload()
 			for _, c := range cb {
 				// most of the callbacks are nil, we don't want to execute nil functions to
 				// avoid panics.
 				if c != nil {
-					c()
+					c() // 回调不为nil,执行
 				}
 			}
 			if len(complete) != 0 {

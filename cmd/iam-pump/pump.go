@@ -7,9 +7,10 @@
 package main
 
 import (
-	_ "go.uber.org/automaxprocs"
 	"math/rand"
 	"time"
+
+	_ "go.uber.org/automaxprocs"
 
 	"github.com/marmotedu/iam/internal/pump"
 )
@@ -19,3 +20,24 @@ func main() {
 
 	pump.NewApp("iam-pump").Run()
 }
+
+/*
+pump实现数据采集;数据采集模块必须具备的功能:
+	1.数据采集通常是非API服务,因此需要额外暴露一个供健康检查的接口
+	2.必须实现优雅关停
+	3.因为要对接下游的组件(ES或mongo等),要能够插件化,能够平滑切换
+	4.采集频率可配置
+
+pump如何实现
+	1.维护全局的pump map,其中包含所有已支持的实现了Pump接口的实例,初始化时根据名字查找对应的pump实例
+	2.维护有一个全局的pump切片,该切片中保存所有已经初始化完毕的可用的pump接口
+	3.开启周期循环,定期在指定的上游(redis)获取消息(获取后立刻删除redis中的key),并反序列化成数据
+	4.遍历pump切片,将同一份数据并发的发送到每一个pump插件中,实现多个下游的不同处理方式
+
+重点:
+	1.pump接口的抽象
+	2.对于pump的全局管理,插件化设计,开启哪些下游仅需修改配置文件
+	3.pump配置文件的设计(通用+额外自定义配置的实现)
+	4.上游数据来源(input)抽象为storage.AnalyticsStorage接口;下游插件抽象为pump接口
+
+*/

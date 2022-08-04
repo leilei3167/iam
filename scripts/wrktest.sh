@@ -31,7 +31,8 @@ source "${iamroot}/scripts/lib/color.sh"
 # Set wrk options
 iam::wrk::setup() {
   #concurrent="200 500 1000 3000 5000 10000 15000 20000 25000 50000 100000 200000 500000 1000000"
-  concurrent="200 500 1000 3000 5000 10000 15000 20000 25000 50000"
+  #concurrent="200 500 1000 3000 5000 10000 15000 20000 25000 50000"
+  concurrent="200 500 1000 3000 5000 10000"
   cmd="wrk -t${threads} -d${duration} -T30s --latency"
 }
 

@@ -11,7 +11,8 @@ import (
 
 	v1 "github.com/marmotedu/api/apiserver/v1"
 	metav1 "github.com/marmotedu/component-base/pkg/meta/v1"
-	"github.com/marmotedu/errors"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/apiserver/store"
 	"github.com/marmotedu/iam/internal/pkg/code"
@@ -41,6 +42,7 @@ func newUsers(srv *service) *userService {
 }
 
 // List returns user list in the storage. This function has a good performance.
+/*并发模板:.*/
 func (u *userService) List(ctx context.Context, opts metav1.ListOptions) (*v1.UserList, error) {
 	users, err := u.store.Users().List(ctx, opts)
 	if err != nil {
@@ -62,7 +64,7 @@ func (u *userService) List(ctx context.Context, opts metav1.ListOptions) (*v1.Us
 		go func(user *v1.User) {
 			defer wg.Done()
 
-			// some cost time process
+			// some cost time process,因为每一个User信息中还需要总的策略数,所以这里需要并发处理
 			policies, err := u.store.Policies().List(ctx, user.Name, metav1.ListOptions{})
 			if err != nil {
 				errChan <- errors.WithCode(code.ErrDatabase, err.Error())
@@ -93,16 +95,16 @@ func (u *userService) List(ctx context.Context, opts metav1.ListOptions) (*v1.Us
 		close(finished)
 	}()
 
-	select {
+	select { // 阻塞,直到所有的协程退出或者某一个出现错误
 	case <-finished:
-	case err := <-errChan:
+	case err := <-errChan: // 只要有任何一个goroutine报错,即返回
 		return nil, err
 	}
 
-	infos := make([]*v1.User, 0, len(users.Items))
+	infos := make([]*v1.User, 0, len(users.Items)) // 为了保证并发处理后的顺序
 	for _, user := range users.Items {
-		info, _ := m.Load(user.ID)
-		infos = append(infos, info.(*v1.User))
+		info, _ := m.Load(user.ID)             // 使用数据库主键为key存入查询,因为Items是有序的,所以最终结果infos也是有序的
+		infos = append(infos, info.(*v1.User)) // 断言成User
 	}
 
 	log.L(ctx).Debugf("get %d users from backend storage.", len(infos))

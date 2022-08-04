@@ -10,7 +10,8 @@ DOCKER := docker
 DOCKER_SUPPORTED_API_VERSION ?= 1.32
 
 REGISTRY_PREFIX ?= marmotedu
-BASE_IMAGE = centos:centos8
+# 基础镜像为 centos:centos8
+BASE_IMAGE = alpine:latest
 
 EXTRA_ARGS ?= --no-cache
 _DOCKER_BUILD_EXTRA_ARGS :=
@@ -24,8 +25,12 @@ _DOCKER_BUILD_EXTRA_ARGS += $(EXTRA_ARGS)
 endif
 
 # Determine image files by looking into build/docker/*/Dockerfile
+# 定义Dokcerfile的目录,wildcard是拓展通配符,即docker目录下的所有内容,每一个都是路径,如iam/build/docker/iam-apiserver/Dockerfile
 IMAGES_DIR ?= $(wildcard ${ROOT_DIR}/build/docker/*)
 # Determine images names by stripping out the dir names
+# $(foreach var,list,text),会逐一取出list中的值,将其赋值给var,然后var作为参数执行text,最终整体会返回一个处理后的字符串列表
+# 会将IMAGES_DIR中所有的字符依次取出,放到image变量中,再将image放到后面的表达式中执行,即作为notdir的参数执行,notdir会返回非目录部分
+# 此处即是将镜像目录的所有文件逐一处理,排除掉目录文件,以及filter-out会去除 tools字符,保留的最终都是Dockerfile
 IMAGES ?= $(filter-out tools,$(foreach image,${IMAGES_DIR},$(notdir ${image})))
 
 ifeq (${IMAGES},)
@@ -56,6 +61,12 @@ image.build: image.verify go.build.verify $(addprefix image.build., $(addprefix 
 .PHONY: image.build.multiarch
 image.build.multiarch: image.verify go.build.verify $(foreach p,$(PLATFORMS),$(addprefix image.build., $(addprefix $(p)., $(IMAGES))))
 
+# image.build.linux_amd64.Dockerfile
+# 先执行go build 将其编译成二进制文件
+# 1.创建临时目录 tmp,Dockerfile替换为指定的baseimage
+# 2.将编译好的二进制文件拷贝到临时目录下(对应),和最终的Dockerfile放在一起
+# 3.imctl的build.sh会执行,其就是将脚本拷贝到scripts目录中
+# 4.注意Dockfile仅仅只拷贝二进制文件,并未拷贝任何的配置文件,配置文件通过CMD指令传入到容器内
 .PHONY: image.build.%
 image.build.%: go.build.%
 	$(eval IMAGE := $(COMMAND))
@@ -73,14 +84,18 @@ image.build.%: go.build.%
 	else \
 		$(DOCKER) build $(BUILD_SUFFIX) ; \
 	fi
-	@rm -rf $(TMP_DIR)/$(IMAGE)
 
+
+# 根makefile将会调用此目标,依次验证docker,go版本等;之后,会将addprefix函数,会将前缀'$(IMAGE_PLAT).' 添加到每一个$(IMAGES)之前,即Dockerfile名字会变为linux_amd64.Dockerfile
+# 前缀默认是linux_$(GOARCH),即,linux_amd64,
+# 最终构成 image.push.linux_amd64.Dockerfile
 .PHONY: image.push
 image.push: image.verify go.build.verify $(addprefix image.push., $(addprefix $(IMAGE_PLAT)., $(IMAGES)))
 
 .PHONY: image.push.multiarch
 image.push.multiarch: image.verify go.build.verify $(foreach p,$(PLATFORMS),$(addprefix image.push., $(addprefix $(p)., $(IMAGES))))
 
+# 推送前必须先构建
 .PHONY: image.push.%
 image.push.%: image.build.%
 	@echo "===========> Pushing image $(IMAGE) $(VERSION) to $(REGISTRY_PREFIX)"

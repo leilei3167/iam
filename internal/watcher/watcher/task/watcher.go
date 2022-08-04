@@ -40,7 +40,7 @@ func (tw *taskWatcher) Run() {
 
 	db, _ := mysql.GetMySQLFactoryOr(nil)
 
-	users, err := db.Users().List(tw.ctx, metav1.ListOptions{})
+	users, err := db.Users().List(tw.ctx, metav1.ListOptions{}) // 定期更新user的状态
 	if err != nil {
 		log.L(tw.ctx).Errorf("list user failed", "error", err)
 
@@ -53,7 +53,7 @@ func (tw *taskWatcher) Run() {
 			continue
 		}
 
-		if time.Since(user.LoginedAt) > time.Duration(tw.maxInactiveDays)*(24*time.Hour) {
+		if time.Since(user.LoginedAt) > time.Duration(tw.maxInactiveDays)*(24*time.Hour) { // 对于超过指定时间未登录的用户,将其禁用
 			log.L(tw.ctx).Infof("user %s not active for %d days, disable his account", user.Name, tw.maxInactiveDays)
 
 			user.Status = 0

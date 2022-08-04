@@ -14,9 +14,10 @@ import (
 	"github.com/marmotedu/component-base/pkg/term"
 	"github.com/marmotedu/component-base/pkg/version"
 	"github.com/marmotedu/component-base/pkg/version/verflag"
-	"github.com/marmotedu/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/pkg/log"
 )
@@ -64,12 +65,20 @@ Use "%s --help" for more information about a command.{{end}}
 
 // App is the main structure of a cli application.
 // It is recommended that an app be created with the app.NewApp() function.
+
 type App struct {
+	/*
+			App实现了多个组件共用,关键点:
+				- 将命令行的配置选项抽象为了CliOptions接口,App依赖的是接口而不是具体某个的实现,这样每个cli都可以
+		实现自己的配置
+				- 使用RunFunc定义不同的程序执行入口
+				- 集成一个cobra的Command
+	*/
 	basename    string
 	name        string
 	description string
-	options     CliOptions
-	runFunc     RunFunc
+	options     CliOptions // 命令行选项抽象,使得这个App可以被多个组件复用
+	runFunc     RunFunc    // runFunc代表整个程序的入口,在cobra命令中被执行(RunE)
 	silence     bool
 	noVersion   bool
 	noConfig    bool
@@ -139,7 +148,7 @@ func WithValidArgs(args cobra.PositionalArgs) Option {
 
 // WithDefaultValidArgs set default validation function to valid non-flag arguments.
 func WithDefaultValidArgs() Option {
-	return func(a *App) {
+	return func(a *App) { // 配置的非选项参数验证,apiserver不应该有任何arg
 		a.args = func(cmd *cobra.Command, args []string) error {
 			for _, arg := range args {
 				if len(arg) > 0 {
@@ -160,17 +169,17 @@ func NewApp(name string, basename string, opts ...Option) *App {
 		basename: basename,
 	}
 
-	for _, o := range opts {
+	for _, o := range opts { // 读取每个配置项并应用
 		o(a)
 	}
 
-	a.buildCommand()
+	a.buildCommand() // 根据已有的配置项,构建cmd命令,注册入口函数RunE等
 
 	return a
 }
 
 func (a *App) buildCommand() {
-	cmd := cobra.Command{
+	cmd := cobra.Command{ // rootCmd
 		Use:   FormatBaseName(a.basename),
 		Short: a.name,
 		Long:  a.description,
@@ -185,36 +194,44 @@ func (a *App) buildCommand() {
 	cmd.Flags().SortFlags = true
 	cliflag.InitFlags(cmd.Flags())
 
+	// 此处创建子命令(iam中都是服务类,没有子命令),并将子命令的flag从option中获取出来
+	// 子命令都带有自己的flagSet
 	if len(a.commands) > 0 {
 		for _, command := range a.commands {
-			cmd.AddCommand(command.cobraCommand())
+			cmd.AddCommand(command.cobraCommand()) // 将app的commands转换为cobra的Command
 		}
 		cmd.SetHelpCommand(helpCommand(FormatBaseName(a.basename)))
 	}
+	// 关键点: 将各个具体的程序入口在此处进行注入
 	if a.runFunc != nil {
+		// 3.此处viper将命令行参数获取,并最终和配置文件的值合并写入options中
+		// 然后运行程序
 		cmd.RunE = a.runCommand
 	}
 
+	// 1.将分好组的pflagSet,绑定到cobra.Command的flag中
 	var namedFlagSets cliflag.NamedFlagSets
 	if a.options != nil {
-		namedFlagSets = a.options.Flags()
-		fs := cmd.Flags()
+		namedFlagSets = a.options.Flags() // 通过CliOptions接口的Flags()方法 实现不同应用的不同flag引入
+		fs := cmd.Flags()                 // 此处pflag和cobra实现了互动
 		for _, f := range namedFlagSets.FlagSets {
 			fs.AddFlagSet(f)
 		}
 	}
 
-	if !a.noVersion {
+	if !a.noVersion { // 根据应用的配置选择性添加一些flag
 		verflag.AddFlags(namedFlagSets.FlagSet("global"))
 	}
-	if !a.noConfig {
+
+	// 2.此处获取配置文件中的配置到viper
+	if !a.noConfig { //!noConfig代表提供flag选项;
 		addConfigFlag(a.basename, namedFlagSets.FlagSet("global"))
 	}
 	globalflag.AddGlobalFlags(namedFlagSets.FlagSet("global"), cmd.Name())
 	// add new global flagset to cmd FlagSet
 	cmd.Flags().AddFlagSet(namedFlagSets.FlagSet("global"))
 
-	addCmdTemplate(&cmd, namedFlagSets)
+	addCmdTemplate(&cmd, namedFlagSets) // 设置打印的帮助函数,此处传入namedFlagSets 将分类打印flag!
 	a.cmd = &cmd
 }
 
@@ -231,7 +248,7 @@ func (a *App) Command() *cobra.Command {
 	return a.cmd
 }
 
-func (a *App) runCommand(cmd *cobra.Command, args []string) error {
+func (a *App) runCommand(cmd *cobra.Command, args []string) error { // 此处是应用程序运行的入口
 	printWorkingDir()
 	cliflag.PrintFlags(cmd.Flags())
 	if !a.noVersion {
@@ -239,16 +256,20 @@ func (a *App) runCommand(cmd *cobra.Command, args []string) error {
 		verflag.PrintAndExitIfRequested()
 	}
 
+	// 注意,此处的viper中已经持有了配置文件的选项,此处是将flag的值和配置文件的值
+	// 合并,并且flag会覆盖配置文件的值(如果有相同键)
 	if !a.noConfig {
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			return err
 		}
-
+		// viper 将flag或配置文件的值写入到options实例中去,后续执行便可直接使用
 		if err := viper.Unmarshal(a.options); err != nil {
 			return err
 		}
 	}
 
+	// 支持,viper将命令行和配置文件的配置合并统一,形成最终的配置,写入到了a.options
+	// 中进行传递
 	if !a.silence {
 		log.Infof("%v Starting %s ...", progressMessage, a.name)
 		if !a.noVersion {
@@ -258,19 +279,23 @@ func (a *App) runCommand(cmd *cobra.Command, args []string) error {
 			log.Infof("%v Config file used: `%s`", progressMessage, viper.ConfigFileUsed())
 		}
 	}
+
+	// 将最终的配置选项进行验证
 	if a.options != nil {
-		if err := a.applyOptionRules(); err != nil {
+		if err := a.applyOptionRules(); err != nil { // 接口的Validate方法,检查选项内容;如果能补全则补全,否则执行其他操作
 			return err
 		}
 	}
-	// run application
-	if a.runFunc != nil {
+
+	// 开始程序
+	if a.runFunc != nil { // 关键点,此处在WithFunc处被配置;此处为真正启动项目的地方
 		return a.runFunc(a.basename)
 	}
 
 	return nil
 }
 
+// 会判断是否同时实现了自动补全接口,和打印接口,是的化将会调用.
 func (a *App) applyOptionRules() error {
 	if completeableOptions, ok := a.options.(CompleteableOptions); ok {
 		if err := completeableOptions.Complete(); err != nil {
@@ -304,7 +329,7 @@ func addCmdTemplate(cmd *cobra.Command, namedFlagSets cliflag.NamedFlagSets) {
 		return nil
 	})
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		fmt.Fprintf(cmd.OutOrStdout(), "%s\n\n"+usageFmt, cmd.Long, cmd.UseLine())
+		fmt.Fprintf(cmd.OutOrStdout(), "%s\n\n"+usageFmt, cmd.Long, cmd.UseLine()) // 先打印cmd.Long,然后Usage
 		cliflag.PrintSections(cmd.OutOrStdout(), namedFlagSets, cols)
 	})
 }

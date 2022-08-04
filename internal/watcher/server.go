@@ -16,7 +16,7 @@ import (
 	"github.com/marmotedu/iam/pkg/shutdown/shutdownmanagers/posixsignal"
 )
 
-type watcherServer struct {
+type watcherServer struct { // watcher整体的功能模块
 	gs             *shutdown.GracefulShutdown
 	cron           *watchJob
 	redisOptions   *genericoptions.RedisOptions
@@ -45,7 +45,7 @@ func createWatcherServer(cfg *config.Config) *watcherServer {
 
 // PrepareRun prepares the server to run, by setting up the server instance.
 func (s *watcherServer) PrepareRun() preparedWatcherServer {
-	mysqlStore, err := mysql.GetMySQLFactoryOr(s.mysqlOptions)
+	mysqlStore, err := mysql.GetMySQLFactoryOr(s.mysqlOptions) // 获取Factory mysql的实例
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +54,7 @@ func (s *watcherServer) PrepareRun() preparedWatcherServer {
 		return mysqlStore.Close()
 	}))
 
-	s.cron = newWatchJob(s.redisOptions, s.watcherOptions).addWatchers()
+	s.cron = newWatchJob(s.redisOptions, s.watcherOptions).addWatchers() // 初始化定时任务管理器,并添加可用的watcher(从全局map中)
 
 	return preparedWatcherServer{s}
 }
@@ -63,7 +63,7 @@ func (s preparedWatcherServer) Run() error {
 	stopCh := make(chan struct{})
 	s.gs.AddShutdownCallback(shutdown.ShutdownFunc(func(string) error {
 		// wait for running jobs to complete.
-		ctx := s.cron.Stop()
+		ctx := s.cron.Stop() // 如果正在执行定时任务,则需要等待其执行完毕再退出(超时3s)
 		select {
 		case <-ctx.Done():
 			log.Info("cron jobs stopped.")

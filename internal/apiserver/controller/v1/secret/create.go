@@ -11,7 +11,8 @@ import (
 	"github.com/marmotedu/component-base/pkg/core"
 	metav1 "github.com/marmotedu/component-base/pkg/meta/v1"
 	"github.com/marmotedu/component-base/pkg/util/idutil"
-	"github.com/marmotedu/errors"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pkg/code"
 	"github.com/marmotedu/iam/internal/pkg/middleware"
@@ -23,7 +24,7 @@ const maxSecretCount = 10
 // Create add new secret key pairs to the storage.
 func (s *SecretController) Create(c *gin.Context) {
 	log.L(c).Info("create secret function called.")
-
+	/*获取并验证参数 其中包含了一些业务性质的参数校验,如secrets.TotalCount >= maxSecretCount */
 	var r v1.Secret
 
 	if err := c.ShouldBindJSON(&r); err != nil {
@@ -62,12 +63,12 @@ func (s *SecretController) Create(c *gin.Context) {
 	// generate secret id and secret key
 	r.SecretID = idutil.NewSecretID()
 	r.SecretKey = idutil.NewSecretKey()
-
+	/*调用业务层,完成密钥的创建*/
 	if err := s.srv.Secrets().Create(c, &r, metav1.CreateOptions{}); err != nil {
 		core.WriteResponse(c, err, nil)
 
 		return
 	}
-
+	/*返回HTTP结果*/
 	core.WriteResponse(c, nil, r)
 }

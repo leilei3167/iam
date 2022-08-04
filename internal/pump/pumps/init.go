@@ -10,7 +10,7 @@ var availablePumps map[string]Pump
 func init() {
 	availablePumps = make(map[string]Pump)
 
-	// Register all the storage handlers here
+	// Register all the storage handlers here 注册后可以从配置文件中开启
 	availablePumps["csv"] = &CSVPump{}
 	availablePumps["mongo"] = &MongoPump{}
 	availablePumps["dummy"] = &DummyPump{}

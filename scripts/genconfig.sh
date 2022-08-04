@@ -8,18 +8,18 @@
 # 示例：genconfig.sh scripts/environment.sh configs/iam-apiserver.yaml
 
 env_file="$1"
-template_file="$2"
+template_file="$2"#在configs目录中只是一个模板文件
 
 IAM_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
 source "${IAM_ROOT}/scripts/lib/init.sh"
 
-if [ $# -ne 2 ];then
+if [ $# -ne 2 ];then # 需要指定环境变量的脚本和模板文件
     iam::log::error "Usage: genconfig.sh scripts/environment.sh configs/iam-apiserver.yaml"
     exit 1
 fi
 
-source "${env_file}"
+source "${env_file}"#注入环境变量
 
 declare -A envs
 
@@ -40,3 +40,4 @@ fi
 eval "cat << EOF
 $(cat ${template_file})
 EOF"
+# 将填充后的模板配置文件输出到cat命令中,在外部调用此脚本时需要使用 > 将cat的结果重定向至指定的文件中去

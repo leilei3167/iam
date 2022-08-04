@@ -25,7 +25,8 @@ const (
 
 // MatchVersionFlags is for setting the "match server version" function.
 type MatchVersionFlags struct {
-	Delegate genericclioptions.RESTClientGetter
+	Delegate genericclioptions.RESTClientGetter // 在本项目中直接继承了ConfigFlags,使得其具备了获取SDK和REST客户端的能力同时其也实现了RESTClientGetter接口,能够
+	// 在一开始先调用服务器的/version接口获取服务端的版本,并判断和flag指定的版本是否相同,相同的话在执行真正的请求,否则返回错误
 
 	RequireMatchedServerVersion bool
 	checkServerVersion          sync.Once
@@ -36,11 +37,11 @@ var _ genericclioptions.RESTClientGetter = &MatchVersionFlags{}
 
 func (f *MatchVersionFlags) checkMatchingServerVersion() error {
 	f.checkServerVersion.Do(func() {
-		if !f.RequireMatchedServerVersion {
+		if !f.RequireMatchedServerVersion { // 没有指定,则直接返回
 			return
 		}
 
-		clientConfig, err := f.Delegate.ToRESTConfig()
+		clientConfig, err := f.Delegate.ToRESTConfig() // 否则先调用/version接口
 		if err != nil {
 			f.matchesServerVersionErr = err
 			return
@@ -59,7 +60,7 @@ func (f *MatchVersionFlags) checkMatchingServerVersion() error {
 			return
 		}
 
-		clientVersion := version.Get()
+		clientVersion := version.Get() // 客户端版本和服务端版本是否对应
 
 		// GitVersion includes GitCommit and GitTreeState, but best to be safe?
 		if clientVersion.GitVersion != sVer.GitVersion || clientVersion.GitCommit != sVer.GitCommit ||
@@ -80,7 +81,7 @@ func (f *MatchVersionFlags) checkMatchingServerVersion() error {
 // to a .iamconfig file, loading rules, and config flag overrides.
 // Expects the AddFlags method to have been called.
 func (f *MatchVersionFlags) ToRESTConfig() (*rest.Config, error) {
-	if err := f.checkMatchingServerVersion(); err != nil {
+	if err := f.checkMatchingServerVersion(); err != nil { // 判断版本是否符合
 		return nil, err
 	}
 	clientConfig, err := f.Delegate.ToRESTConfig()

@@ -11,7 +11,8 @@ import (
 
 // Run runs the specified pump server. This should never exit.
 func Run(cfg *config.Config, stopCh <-chan struct{}) error {
-	go genericapiserver.ServeHealthCheck(cfg.HealthCheckPath, cfg.HealthCheckAddress)
+	// 创建检查检查的API
+	go genericapiserver.ServeHealthCheck(cfg.HealthCheckPath, cfg.HealthCheckAddress) // 暴露一个供健康检查的接口
 
 	server, err := createPumpServer(cfg)
 	if err != nil {

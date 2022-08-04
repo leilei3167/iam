@@ -54,13 +54,13 @@ func Secure(c *gin.Context) {
 }
 
 func defaultMiddlewares() map[string]gin.HandlerFunc {
-	return map[string]gin.HandlerFunc{
+	return map[string]gin.HandlerFunc{ // 此处可按需添加可选中间件
 		"recovery":  gin.Recovery(),
 		"secure":    Secure,
 		"options":   Options,
 		"nocache":   NoCache,
 		"cors":      Cors(),
-		"requestid": RequestID(),
+		"requestid": RequestID(), // 生成请求ID的中间件
 		"logger":    Logger(),
 		"dump":      gindump.Dump(),
 	}

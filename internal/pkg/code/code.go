@@ -7,8 +7,9 @@ package code
 import (
 	"net/http"
 
-	"github.com/marmotedu/errors"
 	"github.com/novalagung/gubrak"
+
+	"github.com/marmotedu/iam/pkg/errors"
 )
 
 // ErrCode implements `github.com/marmotedu/errors`.Coder interface.
@@ -54,9 +55,8 @@ func (coder ErrCode) HTTPStatus() int {
 	return coder.HTTP
 }
 
-// nolint: unparam
 func register(code int, httpStatus int, message string, refs ...string) {
-	found, _ := gubrak.Includes([]int{200, 400, 401, 403, 404, 500}, httpStatus)
+	found, _ := gubrak.Includes([]int{200, 400, 401, 403, 404, 500}, httpStatus) // 限定关联的http code只能在这6个之中
 	if !found {
 		panic("http code not in `200, 400, 401, 403, 404, 500`")
 	}

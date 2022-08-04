@@ -20,7 +20,7 @@ EOF
 # 安装
 function iam::mariadb::install()
 {
-  # 1. 配置 MariaDB 10.5 Yum 源
+  # 1. 配置 MariaDB 10.5 Yum 源,注意centOS7 需要修改版本
   echo ${LINUX_PASSWORD} | sudo -S bash -c "cat << 'EOF' > /etc/yum.repos.d/mariadb-10.5.repo
 # MariaDB 10.5 CentOS repository list - created 2020-10-23 01:54 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
@@ -32,7 +32,7 @@ gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 gpgcheck=0
 EOF"
 
-  # 2. 安装 MariaDB 和 MariaDB 客户端
+  # 2. 安装 MariaDB 和 MariaDB 客户端,此处可以yum clean all 之后makecache
   iam::common::sudo "yum -y install MariaDB-server MariaDB-client"
 
   # 3. 启动 MariaDB，并设置开机启动

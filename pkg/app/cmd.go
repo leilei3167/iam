@@ -86,9 +86,10 @@ func (c *Command) cobraCommand() *cobra.Command {
 		}
 	}
 	if c.runFunc != nil {
-		cmd.Run = c.runCommand
+		cmd.Run = c.runCommand // 该子命令的执行函数
 	}
 	if c.options != nil {
+		// 将该命令的flagset绑定
 		for _, f := range c.options.Flags().FlagSets {
 			cmd.Flags().AddFlagSet(f)
 		}

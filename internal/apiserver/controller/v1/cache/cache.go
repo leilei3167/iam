@@ -12,7 +12,8 @@ import (
 
 	pb "github.com/marmotedu/api/proto/apiserver/v1"
 	metav1 "github.com/marmotedu/component-base/pkg/meta/v1"
-	"github.com/marmotedu/errors"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/apiserver/store"
 	"github.com/marmotedu/iam/internal/pkg/code"
@@ -20,6 +21,8 @@ import (
 )
 
 // Cache defines a cache service used to list all secrets and policies.
+// 实现此接口,可作为GRPC的服务handler,仅提供获取所有Secret和Policy的接口,Authz调用后存在自己内存中
+// https://github.com/marmotedu/api/blob/c655d1ab64d2ef28368dccd0a29ee34dfda80fd8/proto/apiserver/v1/cache.pb.go#L657
 type Cache struct {
 	store store.Factory
 }
@@ -47,7 +50,7 @@ func GetCacheInsOr(store store.Factory) (*Cache, error) {
 // ListSecrets returns all secrets.
 func (c *Cache) ListSecrets(ctx context.Context, r *pb.ListSecretsRequest) (*pb.ListSecretsResponse, error) {
 	log.L(ctx).Info("list secrets function called.")
-	opts := metav1.ListOptions{
+	opts := metav1.ListOptions{ // 将proto的结构转换为model
 		Offset: r.Offset,
 		Limit:  r.Limit,
 	}
@@ -84,13 +87,13 @@ func (c *Cache) ListPolicies(ctx context.Context, r *pb.ListPoliciesRequest) (*p
 		Limit:  r.Limit,
 	}
 
-	policies, err := c.store.Policies().List(ctx, "", opts)
+	policies, err := c.store.Policies().List(ctx, "", opts) // 严格使用仓库层完成对数据库的访问
 	if err != nil {
 		return nil, errors.WithCode(code.ErrDatabase, err.Error())
 	}
 
 	items := make([]*pb.PolicyInfo, 0)
-	for _, pol := range policies.Items {
+	for _, pol := range policies.Items { // 将结果转换为proto定义的结构类型
 		items = append(items, &pb.PolicyInfo{
 			Name:         pol.Name,
 			Username:     pol.Username,

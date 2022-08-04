@@ -4,7 +4,7 @@
 # Use of this source code is governed by a MIT style
 # license that can be found in the LICENSE file.
 
-
+# ${A:-B} 代表 A如果没有值 则将A赋值为B,如果有值则返回A的值
 
 # IAM 项目源码根目录
 IAM_ROOT=$(dirname "${BASH_SOURCE[0]}")/../..

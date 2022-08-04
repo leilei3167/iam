@@ -22,14 +22,14 @@ type cleanWatcher struct {
 }
 
 // Run runs the watcher job.
-func (cw *cleanWatcher) Run() {
+func (cw *cleanWatcher) Run() { // 定时任务的业务逻辑
 	if err := cw.mutex.Lock(); err != nil {
 		log.L(cw.ctx).Info("cleanWatcher already run.")
 
 		return
 	}
 
-	defer func() {
+	defer func() { // 确保任意时刻只有一个相同的实例对数据库进行清理
 		if _, err := cw.mutex.Unlock(); err != nil {
 			log.L(cw.ctx).Errorf("could not release cleanWatcher lock. err: %v", err)
 
@@ -39,7 +39,7 @@ func (cw *cleanWatcher) Run() {
 
 	db, _ := mysql.GetMySQLFactoryOr(nil)
 
-	rowsAffected, err := db.PolicyAudits().ClearOutdated(cw.ctx, cw.maxReserveDays)
+	rowsAffected, err := db.PolicyAudits().ClearOutdated(cw.ctx, cw.maxReserveDays) // 清理过期的数据
 	if err != nil {
 		log.L(cw.ctx).Errorw("clean data from policy_audit failed", "error", err)
 

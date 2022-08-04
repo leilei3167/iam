@@ -11,7 +11,7 @@ import (
 )
 
 // AuthorizationInterface defiens the CURD method for lady policy.
-type AuthorizationInterface interface {
+type AuthorizationInterface interface { // 实现ladon所需要的Manager和AuditLogger接口
 	Create(*ladon.DefaultPolicy) error
 	Update(*ladon.DefaultPolicy) error
 	Delete(id string) error

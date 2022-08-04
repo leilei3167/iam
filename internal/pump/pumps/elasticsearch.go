@@ -12,9 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marmotedu/errors"
 	"github.com/mitchellh/mapstructure"
 	elastic "github.com/olivere/elastic/v7"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pump/analytics"
 	"github.com/marmotedu/iam/pkg/log"

@@ -12,6 +12,7 @@ import (
 
 const (
 	// SectionVars is the help template section that declares variables to be used in the template.
+	// 主要的Usage模板入口,先进行变量的赋值(调用传入的函数或方法).
 	SectionVars = `{{$isRootCmd := isRootCmd .}}` +
 		`{{$rootCmd := rootCmd .}}` +
 		`{{$visibleFlags := visibleFlags (flagsNotIntersected .LocalFlags .PersistentFlags)}}` +
@@ -60,7 +61,7 @@ const (
 )
 
 // MainHelpTemplate if the template for 'help' used by most commands.
-func MainHelpTemplate() string {
+func MainHelpTemplate() string { // with 会将结果传递至下一个end直接的 . 中
 	return `{{with or .Long .Short }}{{. | trim}}{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`
 }
 
@@ -87,6 +88,11 @@ func OptionsHelpTemplate() string {
 
 // OptionsUsageTemplate if the template for 'usage' used by the 'options' command.
 func OptionsUsageTemplate() string {
+	/*
+			首先调用 cobra.Command的HasInheritedFlags方法,检查该命令是否有从其父命令继承的flag,如果有,会打印
+		The following options can be passed to any command:
+
+	*/
 	return `{{ if .HasInheritedFlags}}The following options can be passed to any command:
 
 {{flagsUsages .InheritedFlags}}{{end}}`

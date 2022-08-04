@@ -42,6 +42,7 @@ func (n *Notification) Sign() {
 	n.Signature = hex.EncodeToString(hash[:])
 }
 
+// 接收到Redis订阅后,需要执行的回调函数.
 func handleRedisEvent(v interface{}, handled func(NotificationCommand), reloaded func()) {
 	message, ok := v.(*redis.Message)
 	if !ok {
@@ -57,7 +58,7 @@ func handleRedisEvent(v interface{}, handled func(NotificationCommand), reloaded
 	log.Infow("receive redis message", "command", notif.Command, "payload", message.Payload)
 
 	switch notif.Command {
-	case NoticePolicyChanged, NoticeSecretChanged:
+	case NoticePolicyChanged, NoticeSecretChanged: // 是改变的信息,就需要执行对应的操作(重新拉取,更新缓存)
 		log.Info("Reloading secrets and policies")
 		reloadQueue <- reloaded
 	default:

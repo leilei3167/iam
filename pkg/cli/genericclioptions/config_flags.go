@@ -50,6 +50,8 @@ var _ RESTClientGetter = &ConfigFlags{}
 
 // ConfigFlags composes the set of values necessary
 // for obtaining a REST client config.
+// 全部使用指针,便于通过==nil判断是否需要这个flag
+// 并且实现RESTClientGetter 接口,使得其能够使用配置来初始化SDK客户端或REST客户端,便于子命令调用.
 type ConfigFlags struct {
 	IAMConfig *string
 
@@ -99,7 +101,7 @@ func (f *ConfigFlags) ToRawIAMConfigLoader() clientcmd.ClientConfig {
 
 func (f *ConfigFlags) toRawIAMConfigLoader() clientcmd.ClientConfig {
 	config := clientcmd.NewConfig()
-	if err := viper.Unmarshal(&config); err != nil {
+	if err := viper.Unmarshal(&config); err != nil { // 将Viper中存储的配置解析到Config中
 		panic(err)
 	}
 
@@ -120,7 +122,7 @@ func (f *ConfigFlags) toRawIAMPersistentConfigLoader() clientcmd.ClientConfig {
 }
 
 // AddFlags binds client configuration flags to a given flagset.
-func (f *ConfigFlags) AddFlags(flags *pflag.FlagSet) {
+func (f *ConfigFlags) AddFlags(flags *pflag.FlagSet) { // 判断是否设置了某个flag,并将其添加到flagset中
 	if f.IAMConfig != nil {
 		flags.StringVar(f.IAMConfig, FlagIAMConfig, *f.IAMConfig,
 			fmt.Sprintf("Path to the %s file to use for CLI requests", FlagIAMConfig))
@@ -214,8 +216,8 @@ func (f *ConfigFlags) WithDeprecatedSecretFlag() *ConfigFlags {
 
 // NewConfigFlags returns ConfigFlags with default values set.
 func NewConfigFlags(usePersistentConfig bool) *ConfigFlags {
-	return &ConfigFlags{
-		IAMConfig: pointer.ToString(""),
+	return &ConfigFlags{ // 添加一些默认的flag值
+		IAMConfig: pointer.ToString(""), // 避免需要额外声明一个变量再取地址,不为nil则说明需要将这个flag添加
 
 		BearerToken:   pointer.ToString(""),
 		Insecure:      pointer.ToBool(false),

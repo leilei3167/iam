@@ -23,7 +23,7 @@ func newPolicyAudits(ds *datastore) *policyAudit {
 func (p *policyAudit) ClearOutdated(ctx context.Context, maxReserveDays int) (int64, error) {
 	date := time.Now().AddDate(0, 0, -maxReserveDays).Format("2006-01-02 15:04:05")
 
-	d := p.db.Exec("delete from policy_audit where deletedAt < ?", date)
+	d := p.db.Exec("delete from policy_audit where deletedAt < ?", date) // 删除在当前时间往前指定天数前的数据
 
 	return d.RowsAffected, d.Error
 }

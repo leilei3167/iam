@@ -8,15 +8,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type CommandGroup struct {
-	Message  string
-	Commands []*cobra.Command
+type CommandGroup struct { // 代表一个分组命令
+	Message  string           // 分组名称
+	Commands []*cobra.Command // 这个分组下的所有命令
 }
 
 type CommandGroups []CommandGroup
 
 func (g CommandGroups) Add(c *cobra.Command) {
-	for _, group := range g {
+	for _, group := range g { // 将分组添加到根命令
 		c.AddCommand(group.Commands...)
 	}
 }

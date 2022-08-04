@@ -16,6 +16,7 @@ import (
 )
 
 // Options runs an iam api server.
+// 实现了CliOptions接口,.
 type Options struct {
 	GenericServerRunOptions *genericoptions.ServerRunOptions       `json:"server"   mapstructure:"server"`
 	GRPCOptions             *genericoptions.GRPCOptions            `json:"grpc"     mapstructure:"grpc"`
@@ -30,7 +31,8 @@ type Options struct {
 
 // NewOptions creates a new Options object with default parameters.
 func NewOptions() *Options {
-	o := Options{
+	o := Options{ // 在app调用Flags()时 会执行flag注册,这些配置项统一放在pkg中
+		// 这些
 		GenericServerRunOptions: genericoptions.NewServerRunOptions(),
 		GRPCOptions:             genericoptions.NewGRPCOptions(),
 		InsecureServing:         genericoptions.NewInsecureServingOptions(),
@@ -52,6 +54,7 @@ func (o *Options) ApplyTo(c *server.Config) error {
 
 // Flags returns flags for a specific APIServer by section name.
 func (o *Options) Flags() (fss cliflag.NamedFlagSets) {
+	// 此处对flag进行分组,将不同模块的配置项注册到对应的flag分组中,每一个子模块都将自己选项加入到flag中
 	o.GenericServerRunOptions.AddFlags(fss.FlagSet("generic"))
 	o.JwtOptions.AddFlags(fss.FlagSet("jwt"))
 	o.GRPCOptions.AddFlags(fss.FlagSet("grpc"))

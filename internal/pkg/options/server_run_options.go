@@ -48,6 +48,7 @@ func (s *ServerRunOptions) Validate() []error {
 func (s *ServerRunOptions) AddFlags(fs *pflag.FlagSet) {
 	// Note: the weird ""+ in below lines seems to be the only way to get gofmt to
 	// arrange these text blocks sensibly. Grrr.
+	// 此处将flag进行分组,以 . 分隔命名
 	fs.StringVar(&s.Mode, "server.mode", s.Mode, ""+
 		"Start the server in a specified server mode. Supported server mode: debug, test, release.")
 

@@ -26,10 +26,10 @@ import (
 )
 
 type apiServer struct {
-	gs               *shutdown.GracefulShutdown
+	gs               *shutdown.GracefulShutdown // 优雅退出控制
 	redisOptions     *genericoptions.RedisOptions
 	gRPCAPIServer    *grpcAPIServer
-	genericAPIServer *genericapiserver.GenericAPIServer
+	genericAPIServer *genericapiserver.GenericAPIServer // http服务
 }
 
 type preparedAPIServer struct {
@@ -49,6 +49,7 @@ func createAPIServer(cfg *config.Config) (*apiServer, error) {
 	gs := shutdown.New()
 	gs.AddShutdownManager(posixsignal.NewPosixSignalManager())
 
+	// 分别创建服务的配置文件,然后补全,然后New()得到对应的服务
 	genericConfig, err := buildGenericConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,8 @@ func createAPIServer(cfg *config.Config) (*apiServer, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	// 设计技巧,Complete返回的是嵌套了配置的一个新的结构体,New是它的方法,这样能确保执行New时一定是补全后的
+	// 在实际的 Go 项目开发中，我们需要提供一种机制来处理或补全配置，这在 Go 项目开发中是一个非常有用的步骤。
 	genericServer, err := genericConfig.Complete().New()
 	if err != nil {
 		return nil, err
@@ -109,7 +111,7 @@ func (s preparedAPIServer) Run() error {
 	return s.genericAPIServer.Run()
 }
 
-type completedExtraConfig struct {
+type completedExtraConfig struct { // 设计技巧,这样能偶确保New创建实例一定是complete之后的配置
 	*ExtraConfig
 }
 
@@ -124,17 +126,18 @@ func (c *ExtraConfig) complete() *completedExtraConfig {
 
 // New create a grpcAPIServer instance.
 func (c *completedExtraConfig) New() (*grpcAPIServer, error) {
+	// 创建加密的grpc服务
 	creds, err := credentials.NewServerTLSFromFile(c.ServerCert.CertKey.CertFile, c.ServerCert.CertKey.KeyFile)
 	if err != nil {
 		log.Fatalf("Failed to generate credentials %s", err.Error())
 	}
 	opts := []grpc.ServerOption{grpc.MaxRecvMsgSize(c.MaxMsgSize), grpc.Creds(creds)}
 	grpcServer := grpc.NewServer(opts...)
-
+	// 此处第一次初始化数据库,router中不需要再次初始化;grpc服务中用此数据库实例查询数据库,供authz服务调用
 	storeIns, _ := mysql.GetMySQLFactoryOr(c.mysqlOptions)
 	// storeIns, _ := etcd.GetEtcdFactoryOr(c.etcdOptions, nil)
 	store.SetClient(storeIns)
-	cacheIns, err := cachev1.GetCacheInsOr(storeIns)
+	cacheIns, err := cachev1.GetCacheInsOr(storeIns) // 获取实现了proto文件定义的接口的实例,用于注册到gRPC服务中
 	if err != nil {
 		log.Fatalf("Failed to get cache instance: %s", err.Error())
 	}
@@ -167,7 +170,6 @@ func buildGenericConfig(cfg *config.Config) (genericConfig *genericapiserver.Con
 	return
 }
 
-//nolint: unparam
 func buildExtraConfig(cfg *config.Config) (*ExtraConfig, error) {
 	return &ExtraConfig{
 		Addr:         fmt.Sprintf("%s:%d", cfg.GRPCOptions.BindAddress, cfg.GRPCOptions.BindPort),
@@ -182,7 +184,7 @@ func (s *apiServer) initRedisStore() {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.gs.AddShutdownCallback(shutdown.ShutdownFunc(func(string) error {
 		cancel()
-
+		// 利用了闭包 将cancle一并传入到了优雅退出管理中
 		return nil
 	}))
 

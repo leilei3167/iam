@@ -5,7 +5,8 @@
 // Package storage defines storages which store the analytics data from iam-authz-server.
 package storage
 
-// AnalyticsStorage defines the analytics storage interface.
+// AnalyticsStorage defines the analytics storage interface
+// 上游的数据来源抽象为接口.
 type AnalyticsStorage interface {
 	Init(config interface{}) error
 	GetName() string

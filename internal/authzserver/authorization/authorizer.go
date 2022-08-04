@@ -21,8 +21,8 @@ type Authorizer struct {
 func NewAuthorizer(authorizationClient AuthorizationInterface) *Authorizer {
 	return &Authorizer{
 		warden: &ladon.Ladon{
-			Manager:     NewPolicyManager(authorizationClient),
-			AuditLogger: NewAuditLogger(authorizationClient),
+			Manager:     NewPolicyManager(authorizationClient), // 实现Manager接口
+			AuditLogger: NewAuditLogger(authorizationClient),   // 鉴权日志记录
 		},
 	}
 }

@@ -30,7 +30,6 @@ require (
 	github.com/likexian/host-stat-go v0.0.0-20190516151207-c9cf36dd6ce9
 	github.com/marmotedu/api v1.6.3
 	github.com/marmotedu/component-base v1.6.2
-	github.com/marmotedu/errors v1.0.2
 	github.com/marmotedu/marmotedu-sdk-go v1.6.2
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/go-wordwrap v1.0.1
@@ -41,6 +40,7 @@ require (
 	github.com/olivere/elastic/v7 v7.0.29
 	github.com/ory/ladon v1.2.0
 	github.com/parnurzeal/gorequest v0.2.16
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/russross/blackfriday v1.6.0
@@ -106,6 +106,7 @@ require (
 	github.com/likexian/gokit v0.0.0-20190515154418-0f6bc9e9ef89 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/marmotedu/errors v1.0.2 // indirect
 	github.com/marmotedu/log v0.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.9 // indirect
 	github.com/mattn/go-runewidth v0.0.10 // indirect
@@ -115,7 +116,6 @@ require (
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pierrec/lz4 v2.6.0+incompatible // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect

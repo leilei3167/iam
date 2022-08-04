@@ -8,7 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/marmotedu/component-base/pkg/core"
 	metav1 "github.com/marmotedu/component-base/pkg/meta/v1"
-	"github.com/marmotedu/errors"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pkg/code"
 	"github.com/marmotedu/iam/pkg/log"
@@ -19,7 +20,7 @@ import (
 func (u *UserController) List(c *gin.Context) {
 	log.L(c).Info("list user function called.")
 
-	var r metav1.ListOptions
+	var r metav1.ListOptions // 此处实现翻页显示 过滤条件等
 	if err := c.ShouldBindQuery(&r); err != nil {
 		core.WriteResponse(c, errors.WithCode(code.ErrBind, err.Error()), nil)
 

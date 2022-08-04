@@ -216,7 +216,7 @@ function iam::install::obtain_branch_flag(){
     echo `cat "${IAM_ROOT}"/version`
   fi
 }
-
+# 安装完数据库之后的准备工作
 function iam::install::prepare_iam()
 {
   rm -rf $WORKSPACE/golang/src/github.com/marmotedu/iam # clean up
@@ -316,7 +316,7 @@ function iam::install::install_cfssl()
   chmod +x $HOME/bin/{cfssl,cfssljson,cfssl-certinfo}
   iam::log::info "install cfssl tools successfully"
 }
-
+# 安装数据库并初始化
 function iam::install::install_storage()
 {
   iam::mariadb::install || return 1
@@ -387,7 +387,7 @@ function iam::install::init_into_vim_env(){
   iam::log::info "initialize linux with SpaceVim successfully"
 }
 
-function iam::install::install()
+function iam::install::install() # 一键安装入口
 {
   # 1. 配置 Linux 使其成为一个友好的 Go 开发机
   iam::install::init_into_go_env || return 1

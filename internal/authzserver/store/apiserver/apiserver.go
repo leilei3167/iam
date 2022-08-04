@@ -15,7 +15,7 @@ import (
 	"github.com/marmotedu/iam/pkg/log"
 )
 
-type datastore struct {
+type datastore struct { // grpc客户端实现Factory接口,视为仓库层,因为对于Authz来说 相当于是与数据库交互
 	cli pb.CacheClient
 }
 

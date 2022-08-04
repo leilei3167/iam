@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/marmotedu/component-base/pkg/json"
-	"github.com/marmotedu/errors"
 	"github.com/mitchellh/mapstructure"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl"
 	"github.com/segmentio/kafka-go/sasl/plain"
 	"github.com/segmentio/kafka-go/sasl/scram"
 	"github.com/segmentio/kafka-go/snappy"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pump/analytics"
 	"github.com/marmotedu/iam/pkg/log"
@@ -72,7 +73,7 @@ func (k *KafkaPump) Init(config interface{}) error {
 	}
 
 	var tlsConfig *tls.Config
-	// nolint: nestif
+	//nolint: nestif
 	if k.kafkaConf.UseSSL {
 		if k.kafkaConf.SSLCertFile != "" && k.kafkaConf.SSLKeyFile != "" {
 			var cert tls.Certificate

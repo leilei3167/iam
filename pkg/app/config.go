@@ -21,7 +21,7 @@ const configFlagName = "config"
 
 var cfgFile string
 
-//nolint: gochecknoinits
+// nolint: gochecknoinits
 func init() {
 	pflag.StringVarP(&cfgFile, "config", "c", cfgFile, "Read configuration from specified `FILE`, "+
 		"support JSON, TOML, YAML, HCL, or Java properties formats.")
@@ -37,9 +37,9 @@ func addConfigFlag(basename string, fs *pflag.FlagSet) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 
 	cobra.OnInitialize(func() {
-		if cfgFile != "" {
+		if cfgFile != "" { // 如果指定了配置文件,则viper从中读取
 			viper.SetConfigFile(cfgFile)
-		} else {
+		} else { // 否则此处设置默认的 寻找配置文件的路径
 			viper.AddConfigPath(".")
 
 			if names := strings.Split(basename, "-"); len(names) > 1 {

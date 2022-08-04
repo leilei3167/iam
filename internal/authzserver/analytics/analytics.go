@@ -34,7 +34,7 @@ type AnalyticsRecord struct {
 	ExpireAt   time.Time `json:"expireAt"   bson:"expireAt"`
 }
 
-var analytics *Analytics
+var analytics *Analytics // 单例模式,此处确定只会被初始化一次,所以没有用Once;在鉴权失败或成功时会被调用
 
 // SetExpiry set expiration time to a key.
 func (a *AnalyticsRecord) SetExpiry(expiresInSeconds int64) {
@@ -50,7 +50,7 @@ func (a *AnalyticsRecord) SetExpiry(expiresInSeconds int64) {
 }
 
 // Analytics will record analytics data to a redis back end as defined in the Config object.
-type Analytics struct {
+type Analytics struct { // 功能模块化,相当于类,NewXXX相当于他的构造函数,下面跟一系列的方法,使得功能围绕着Analytics展开
 	store                      storage.AnalyticsHandler
 	poolSize                   int
 	recordsChan                chan *AnalyticsRecord
@@ -71,10 +71,10 @@ func NewAnalytics(options *AnalyticsOptions, store storage.AnalyticsHandler) *An
 
 	analytics = &Analytics{
 		store:                      store,
-		poolSize:                   ps,
+		poolSize:                   ps, // worker个数
 		recordsChan:                recordsChan,
-		workerBufferSize:           workerBufferSize,
-		recordsBufferFlushInterval: options.FlushInterval,
+		workerBufferSize:           workerBufferSize,      // 每个worker的批量投递的缓冲大小
+		recordsBufferFlushInterval: options.FlushInterval, // 投递最长间隔
 	}
 
 	return analytics
@@ -94,16 +94,16 @@ func (r *Analytics) Start() {
 	atomic.SwapUint32(&r.shouldStop, 0)
 	for i := 0; i < r.poolSize; i++ {
 		r.poolWg.Add(1)
-		go r.recordWorker()
+		go r.recordWorker() // 并发记录
 	}
 }
 
 // Stop stop the analytics service.
 func (r *Analytics) Stop() {
 	// flag to stop sending records into channel
-	atomic.SwapUint32(&r.shouldStop, 1)
+	atomic.SwapUint32(&r.shouldStop, 1) // 设置退出标记,避免在此期间继续投递
 
-	// close channel to stop workers
+	// close channel to stop workers;关闭后会使得所有的worker感知到,将各自当前缓冲区的消息立即投递后退出
 	close(r.recordsChan)
 
 	// wait for all workers to be done
@@ -113,23 +113,24 @@ func (r *Analytics) Stop() {
 // RecordHit will store an AnalyticsRecord in Redis.
 func (r *Analytics) RecordHit(record *AnalyticsRecord) error {
 	// check if we should stop sending records 1st
-	if atomic.LoadUint32(&r.shouldStop) > 0 {
+	if atomic.LoadUint32(&r.shouldStop) > 0 { // 在缓存前，需要判断上报服务是否在优雅关停中，如果在关停中，则丢弃该消息
 		return nil
 	}
 
 	// just send record to channel consumed by pool of workers
 	// leave all data crunching and Redis I/O work for pool workers
-	r.recordsChan <- record
+	r.recordsChan <- record // 将日志内容写入Chan后退出(异步上报)
 
 	return nil
 }
 
+// 默认会开启50个工作协程,发送的条件:1.达到单次发送的容量上限;2.达到了发送等待间隔的上限(需记录上一次发送的时间).
 func (r *Analytics) recordWorker() {
-	defer r.poolWg.Done()
+	defer r.poolWg.Done() // 确保计数器归零
 
 	// this is buffer to send one pipelined command to redis
 	// use r.recordsBufferSize as cap to reduce slice re-allocations
-	recordsBuffer := make([][]byte, 0, r.workerBufferSize)
+	recordsBuffer := make([][]byte, 0, r.workerBufferSize) // 用于存放批量日志数据的切片,以此为单位发送
 
 	// read records from channel and process
 	lastSentTS := time.Now()
@@ -138,8 +139,8 @@ func (r *Analytics) recordWorker() {
 		select {
 		case record, ok := <-r.recordsChan:
 			// check if channel was closed and it is time to exit from worker
-			if !ok {
-				// send what is left in buffer
+			if !ok { // 支持优雅退出,通道关闭时,将当前缓冲区的数据发送完毕再退出
+				// send what is left in buffer,将缓冲中剩余的数据发送
 				r.store.AppendToSetPipelined(analyticsKeyName, recordsBuffer)
 
 				return
@@ -147,25 +148,28 @@ func (r *Analytics) recordWorker() {
 
 			// we have new record - prepare it and add to buffer
 
-			if encoded, err := msgpack.Marshal(record); err != nil {
+			if encoded, err := msgpack.Marshal(record); err != nil { // msgpack序列化 比 JSON 更快、更小
 				log.Errorf("Error encoding analytics data: %s", err.Error())
 			} else {
 				recordsBuffer = append(recordsBuffer, encoded)
 			}
 
 			// identify that buffer is ready to be sent
+			// 此处为阈值判断，当buffer中的数据量达到阈值时，就可以发送了(单个数据的容量并未指定)
 			readyToSend = uint64(len(recordsBuffer)) == r.workerBufferSize
 
-		case <-time.After(time.Duration(r.recordsBufferFlushInterval) * time.Millisecond):
+		case <-time.After(time.Duration(r.recordsBufferFlushInterval) * time.Millisecond): // 超时投递,避免消息产生较慢,达不到batchSize无法发送的情况
 			// nothing was received for that period of time
 			// anyways send whatever we have, don't hold data too long in buffer
+			// 超过了发送超时
 			readyToSend = true
 		}
 
 		// send data to Redis and reset buffer
+		// 此处判断投递条件,决定是否投递,投递后将Buffer重置,避免重复投递
 		if len(recordsBuffer) > 0 && (readyToSend || time.Since(lastSentTS) >= recordsBufferForcedFlushInterval) {
-			r.store.AppendToSetPipelined(analyticsKeyName, recordsBuffer)
-			recordsBuffer = recordsBuffer[:0]
+			r.store.AppendToSetPipelined(analyticsKeyName, recordsBuffer) // 投递
+			recordsBuffer = recordsBuffer[:0]                             // 重置
 			lastSentTS = time.Now()
 		}
 	}

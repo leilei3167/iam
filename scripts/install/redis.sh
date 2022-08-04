@@ -19,10 +19,10 @@ EOF
 # 安装
 function iam::redis::install()
 {
-  # 1. 安装 Redis
+  # 1. 安装 Redis TODO:指定版本,默认会下载3.x版本
   iam::common::sudo "yum -y install redis"
 
-  # 2. 配置 Redis
+  # 2. 配置 Redis,熟练使用sed命令
   # 2.1 修改 `/etc/redis.conf` 文件，将 daemonize 由 no 改成 yes，表示允许 Redis 在后台启动
   echo ${LINUX_PASSWORD} | sudo -S sed -i '/^daemonize/{s/no/yes/}' /etc/redis.conf
 
@@ -66,7 +66,7 @@ function iam::redis::status()
     return 1
   fi
 
-
+# --no-auth-warning 和--hotkeys可能不被支持
   redis-cli --no-auth-warning -h ${REDIS_HOST} -p ${REDIS_PORT} -a "${REDIS_PASSWORD}" --hotkeys || {
     iam::log::error "can not login with ${REDIS_USERNAME}, redis maybe not initialized properly"
     return 1

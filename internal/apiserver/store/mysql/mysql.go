@@ -9,8 +9,9 @@ import (
 	"sync"
 
 	v1 "github.com/marmotedu/api/apiserver/v1"
-	"github.com/marmotedu/errors"
 	"gorm.io/gorm"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/apiserver/store"
 	"github.com/marmotedu/iam/internal/pkg/logger"
@@ -82,7 +83,7 @@ func GetMySQLFactoryOr(opts *genericoptions.MySQLOptions) (store.Factory, error)
 		// not suggested in production environment.
 		// migrateDatabase(dbIns)
 
-		mysqlFactory = &datastore{dbIns}
+		mysqlFactory = &datastore{dbIns} // 此处依赖注入
 	})
 
 	if mysqlFactory == nil || err != nil {

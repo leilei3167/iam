@@ -20,9 +20,10 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/marmotedu/errors"
 	"github.com/mitchellh/mapstructure"
 	"github.com/vinllen/mgo"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pump/analytics"
 	"github.com/marmotedu/iam/pkg/log"
@@ -149,7 +150,7 @@ func mongoDialInfo(conf BaseMongoConf) (dialInfo *mgo.DialInfo, err error) {
 		return dialInfo, errors.Wrap(err, "failed to parse mongo url")
 	}
 
-	// nolint: nestif
+	//nolint: nestif
 	if conf.MongoUseSSL {
 		dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
 			tlsConfig := &tls.Config{}

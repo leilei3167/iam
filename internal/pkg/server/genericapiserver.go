@@ -58,7 +58,7 @@ func initGenericAPIServer(s *GenericAPIServer) {
 // InstallAPIs install generic apis.
 func (s *GenericAPIServer) InstallAPIs() {
 	// install healthz handler
-	if s.healthz {
+	if s.healthz { // 如果配置了healthz,则会安装该路由,默认是true
 		s.GET("/healthz", func(c *gin.Context) {
 			core.WriteResponse(c, nil, map[string]string{"status": "ok"})
 		})
@@ -90,12 +90,12 @@ func (s *GenericAPIServer) Setup() {
 // InstallMiddlewares install generic middlewares.
 func (s *GenericAPIServer) InstallMiddlewares() {
 	// necessary middlewares
-	s.Use(middleware.RequestID())
+	s.Use(middleware.RequestID()) // 全局必备的中间件,检查是否已有requsetID,没有的话生成,并写入到ctx中
 	s.Use(middleware.Context())
 
-	// install custom middlewares
+	// install custom middlewares,此处获取中间件的名字(viper从配置文件中获取的)
 	for _, m := range s.middlewares {
-		mw, ok := middleware.Middlewares[m]
+		mw, ok := middleware.Middlewares[m] // 从map中取出对应的中间件
 		if !ok {
 			log.Warnf("can not find middleware: %s", m)
 

@@ -7,7 +7,8 @@ package authzserver
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/marmotedu/component-base/pkg/core"
-	"github.com/marmotedu/errors"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/authzserver/controller/v1/authorize"
 	"github.com/marmotedu/iam/internal/authzserver/load/cache"
@@ -24,6 +25,7 @@ func installMiddleware(g *gin.Engine) {
 }
 
 func installController(g *gin.Engine) *gin.Engine {
+	// 设置认证的策略
 	auth := newCacheAuth()
 	g.NoRoute(auth.AuthFunc(), func(c *gin.Context) {
 		core.WriteResponse(c, errors.WithCode(code.ErrPageNotFound, "page not found."), nil)
@@ -36,7 +38,7 @@ func installController(g *gin.Engine) *gin.Engine {
 
 	apiv1 := g.Group("/v1", auth.AuthFunc())
 	{
-		authzController := authorize.NewAuthzController(cacheIns)
+		authzController := authorize.NewAuthzController(cacheIns) // cache实现了PolicyGetter接口,可从自己的内存缓存中读取policy
 
 		// Router for authorization
 		apiv1.POST("/authz", authzController.Authorize)

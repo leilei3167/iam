@@ -7,7 +7,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/marmotedu/errors"
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pkg/code"
 )

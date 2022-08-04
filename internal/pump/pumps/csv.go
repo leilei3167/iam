@@ -12,8 +12,9 @@ import (
 	"path"
 	"time"
 
-	"github.com/marmotedu/errors"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pump/analytics"
 	"github.com/marmotedu/iam/pkg/log"

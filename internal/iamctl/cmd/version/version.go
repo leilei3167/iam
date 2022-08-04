@@ -112,6 +112,7 @@ func (o *Options) Run() error {
 
 	if !o.ClientOnly && o.client != nil {
 		// Always request fresh data from the server
+		// 使用REST 客户端进行调用
 		if err := o.client.Get().AbsPath("/version").Do(context.TODO()).Into(&serverVersion); err != nil {
 			return err
 		}

@@ -26,7 +26,7 @@ type ListOptions struct {
 	Offset int64
 	Limit  int64
 
-	iamclient iam.IamInterface
+	iamclient iam.IamInterface // SDK客户端
 	genericclioptions.IOStreams
 }
 
@@ -59,13 +59,13 @@ func NewCmdList(f cmdutil.Factory, ioStreams genericclioptions.IOStreams) *cobra
 		Long:                  "Display all users in iam platform (Administrator rights required).",
 		Example:               listExample,
 		Run: func(cmd *cobra.Command, args []string) {
-			cmdutil.CheckErr(o.Complete(f, cmd, args))
+			cmdutil.CheckErr(o.Complete(f, cmd, args)) // 补全,验证,执行
 			cmdutil.CheckErr(o.Validate(cmd, args))
 			cmdutil.CheckErr(o.Run(args))
 		},
 		SuggestFor: []string{},
 	}
-
+	// 在当前命令下添加flag
 	cmd.Flags().Int64VarP(&o.Offset, "offset", "o", o.Offset, "Specify the offset of the first row to be returned.")
 	cmd.Flags().Int64VarP(&o.Limit, "limit", "l", o.Limit, "Specify the amount records to be returned.")
 

@@ -3,7 +3,8 @@
 // license that can be found in the LICENSE file.
 
 // Package new used to generate demo command code.
-//nolint: predeclared
+//
+//nolint:predeclared
 package new
 
 import (

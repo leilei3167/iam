@@ -11,10 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/marmotedu/errors"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/apiserver/store"
 	genericoptions "github.com/marmotedu/iam/internal/pkg/options"

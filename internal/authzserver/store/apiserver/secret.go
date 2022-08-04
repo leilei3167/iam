@@ -10,7 +10,8 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/avast/retry-go"
 	pb "github.com/marmotedu/api/proto/apiserver/v1"
-	"github.com/marmotedu/errors"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/pkg/log"
 )
@@ -38,7 +39,7 @@ func (s *secrets) List() (map[string]*pb.SecretInfo, error) {
 	err := retry.Do(
 		func() error {
 			var listErr error
-			resp, listErr = s.cli.ListSecrets(context.Background(), req)
+			resp, listErr = s.cli.ListSecrets(context.Background(), req) // gRPC调用
 			if listErr != nil {
 				return listErr
 			}

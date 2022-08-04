@@ -38,7 +38,7 @@ func initProfiling() error {
 			return err
 		}
 
-		return pprof.StartCPUProfile(f)
+		return pprof.StartCPUProfile(f) // TODO:f未关闭
 	// Block and mutex profiles need a call to Set{Block,Mutex}ProfileRate to
 	// output anything. We choose to sample all events.
 	case "block":

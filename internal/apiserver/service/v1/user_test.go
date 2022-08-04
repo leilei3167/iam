@@ -20,7 +20,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	_, _ = fake.GetFakeFactoryOr()
+	_, _ = fake.GetFakeFactoryOr() //main测试函数中 一般用来做测试前的初始化工作
 	os.Exit(m.Run())
 }
 

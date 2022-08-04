@@ -16,11 +16,13 @@ import (
 
 // PumpConfig defines options for pump back-end.
 type PumpConfig struct {
+	// 通用配置
 	Type                  string                     `json:"type"                    mapstructure:"type"`
 	Filters               analytics.AnalyticsFilters `json:"filters"                 mapstructure:"filters"`
 	Timeout               int                        `json:"timeout"                 mapstructure:"timeout"`
 	OmitDetailedRecording bool                       `json:"omit-detailed-recording" mapstructure:"omit-detailed-recording"`
-	Meta                  map[string]interface{}     `json:"meta"                    mapstructure:"meta"`
+	// Meta是额外的自定义配置;通用配置可以使配置共享，减少开发和维护工作量，自定义配置可以适配不同 pump 的差异化配置。
+	Meta map[string]interface{} `json:"meta"                    mapstructure:"meta"`
 }
 
 // Options runs a pumpserver.

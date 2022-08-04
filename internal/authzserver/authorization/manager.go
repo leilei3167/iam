@@ -5,8 +5,9 @@
 package authorization
 
 import (
-	"github.com/marmotedu/errors"
 	"github.com/ory/ladon"
+
+	"github.com/marmotedu/iam/pkg/errors"
 )
 
 // PolicyManager is a mysql implementation for Manager to store
@@ -50,7 +51,8 @@ func (*PolicyManager) GetAll(limit, offset int64) (ladon.Policies, error) {
 
 // FindRequestCandidates returns candidates that could match the request object. It either returns
 // a set that exactly matches the request, or a superset of it. If an error occurs, it returns nil and
-// the error.
+// the error
+// 关键.
 func (m *PolicyManager) FindRequestCandidates(r *ladon.Request) (ladon.Policies, error) {
 	username := ""
 
@@ -58,7 +60,7 @@ func (m *PolicyManager) FindRequestCandidates(r *ladon.Request) (ladon.Policies,
 		username = user
 	}
 
-	policies, err := m.client.List(username)
+	policies, err := m.client.List(username) // 调用内存缓存,获取Policy列表
 	if err != nil {
 		return nil, errors.Wrap(err, "list policies failed")
 	}

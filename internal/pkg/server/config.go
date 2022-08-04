@@ -125,9 +125,9 @@ func (c CompletedConfig) New() (*GenericAPIServer, error) {
 
 // LoadConfig reads in config file and ENV variables if set.
 func LoadConfig(cfg string, defaultName string) {
-	if cfg != "" {
+	if cfg != "" { // 如果显示的指定了配置文件
 		viper.SetConfigFile(cfg)
-	} else {
+	} else { // 未指定配置文件,则将 `当前的目录,$HOME/.iam,以及/etc/iam加入`
 		viper.AddConfigPath(".")
 		viper.AddConfigPath(filepath.Join(homedir.HomeDir(), RecommendedHomeDir))
 		viper.AddConfigPath("/etc/iam")
@@ -141,6 +141,7 @@ func LoadConfig(cfg string, defaultName string) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 
 	// If a config file is found, read it in.
+	// 在设定的路径中找配置文件
 	if err := viper.ReadInConfig(); err != nil {
 		log.Warnf("WARNING: viper failed to discover and load the configuration file: %s", err.Error())
 	}

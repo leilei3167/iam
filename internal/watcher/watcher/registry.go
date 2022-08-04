@@ -14,6 +14,7 @@ import (
 )
 
 // IWatcher is the interface for watchers.
+// watcher接口定义,同时要实现Job接口.
 type IWatcher interface {
 	Init(ctx context.Context, rs *redsync.Mutex, config interface{}) error
 	Spec() string
@@ -22,7 +23,7 @@ type IWatcher interface {
 
 var (
 	registryLock = new(sync.Mutex)
-	registry     = make(map[string]IWatcher)
+	registry     = make(map[string]IWatcher) // 管理watcher实例
 )
 
 var (

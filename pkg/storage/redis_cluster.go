@@ -14,9 +14,10 @@ import (
 	"time"
 
 	redis "github.com/go-redis/redis/v7"
-	"github.com/marmotedu/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/spf13/viper"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/pkg/log"
 )
@@ -42,9 +43,9 @@ type Config struct {
 var ErrRedisIsDown = errors.New("storage: Redis is either down or ws not configured")
 
 var (
-	singlePool      atomic.Value
-	singleCachePool atomic.Value
-	redisUp         atomic.Value
+	singlePool      atomic.Value // 非cache的Redis客户端
+	singleCachePool atomic.Value // 用于作为cache的Redis客户端
+	redisUp         atomic.Value // 保存redis的状态
 )
 
 var disableRedis atomic.Value
@@ -63,7 +64,7 @@ func DisableRedis(ok bool) {
 
 func shouldConnect() bool {
 	if v := disableRedis.Load(); v != nil {
-		return !v.(bool)
+		return !v.(bool) // 如果是关闭Redis的模式,则不应该重连至Redis
 	}
 
 	return true
@@ -79,6 +80,7 @@ func Connected() bool {
 }
 
 func singleton(cache bool) redis.UniversalClient {
+	// 检查是否已经有Redis的客户端示例,如有返回,没有则返回nil
 	if cache {
 		v := singleCachePool.Load()
 		if v != nil {
@@ -94,12 +96,11 @@ func singleton(cache bool) redis.UniversalClient {
 	return nil
 }
 
-// nolint: unparam
 func connectSingleton(cache bool, config *Config) bool {
-	if singleton(cache) == nil {
+	if singleton(cache) == nil { // 未初始化,则使用配置文件创建Redis
 		log.Debug("Connecting to redis cluster")
 		if cache {
-			singleCachePool.Store(NewRedisClusterPool(cache, config))
+			singleCachePool.Store(NewRedisClusterPool(cache, config)) // Redis集群池
 
 			return true
 		}
@@ -113,8 +114,8 @@ func connectSingleton(cache bool, config *Config) bool {
 
 // RedisCluster is a storage manager that uses the redis database.
 type RedisCluster struct {
-	KeyPrefix string
-	HashKeys  bool
+	KeyPrefix string // key前缀
+	HashKeys  bool   // 是否要将key哈希
 	IsCache   bool
 }
 
@@ -140,15 +141,15 @@ func ConnectToRedis(ctx context.Context, config *Config) {
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
 	c := []RedisCluster{
-		{}, {IsCache: true},
+		{}, {IsCache: true}, // TODO:为什么此处会创建2个Redis的连接池,一个普通的,一个用于cache
 	}
 	var ok bool
 	for _, v := range c {
-		if !connectSingleton(v.IsCache, config) {
+		if !connectSingleton(v.IsCache, config) { // 永远为true,此处会建立Redis的连接池
 			break
 		}
 
-		if !clusterConnectionIsOpen(v) {
+		if !clusterConnectionIsOpen(v) { // 依次检查Redis连接池是否正常,存入后立即读取一个key
 			redisUp.Store(false)
 
 			break
@@ -159,10 +160,10 @@ func ConnectToRedis(ctx context.Context, config *Config) {
 again:
 	for {
 		select {
-		case <-ctx.Done():
+		case <-ctx.Done(): // 结束循环
 			return
-		case <-tick.C:
-			if !shouldConnect() {
+		case <-tick.C: // 每秒,检查是否需要重新建立连接
+			if !shouldConnect() { // 判断是否处于关闭Redis的模式(Redis可以动态的关闭),如果是,则不进行重连;否则进行重连
 				continue
 			}
 			for _, v := range c {
@@ -172,7 +173,7 @@ again:
 					goto again
 				}
 
-				if !clusterConnectionIsOpen(v) {
+				if !clusterConnectionIsOpen(v) { // 检查连接,不能正常操作则重试
 					redisUp.Store(false)
 
 					goto again
@@ -184,6 +185,7 @@ again:
 }
 
 // NewRedisClusterPool create a redis cluster pool.
+// 根据配置文件创建不同的Redis客户端.
 func NewRedisClusterPool(isCache bool, config *Config) redis.UniversalClient {
 	// redisSingletonMu is locked and we know the singleton is nil
 	log.Debug("Creating new Redis connection pool")
@@ -218,17 +220,17 @@ func NewRedisClusterPool(isCache bool, config *Config) redis.UniversalClient {
 		ReadTimeout:  timeout,
 		WriteTimeout: timeout,
 		IdleTimeout:  240 * timeout,
-		PoolSize:     poolSize,
+		PoolSize:     poolSize, // 连接池 默认500
 		TLSConfig:    tlsConfig,
 	}
-
+	// 根据配置来创建不同的Redis实例
 	if opts.MasterName != "" {
 		log.Info("--> [REDIS] Creating sentinel-backed failover client")
 		client = redis.NewFailoverClient(opts.failover())
 	} else if config.EnableCluster {
 		log.Info("--> [REDIS] Creating cluster client")
 		client = redis.NewClusterClient(opts.cluster())
-	} else {
+	} else { // 单节点Redis
 		log.Info("--> [REDIS] Creating single-node client")
 		client = redis.NewClient(opts.simple())
 	}
@@ -895,10 +897,10 @@ func (r *RedisCluster) DeleteKeys(keys []string) bool {
 // StartPubSubHandler will listen for a signal and run the callback for
 // every subscription and message event.
 func (r *RedisCluster) StartPubSubHandler(channel string, callback func(interface{})) error {
-	if err := r.up(); err != nil {
+	if err := r.up(); err != nil { // 检查Redis是否在线
 		return err
 	}
-	client := r.singleton()
+	client := r.singleton() // 取出Redis客户端示例供使用
 	if client == nil {
 		return errors.New("redis connection failed")
 	}
@@ -912,7 +914,7 @@ func (r *RedisCluster) StartPubSubHandler(channel string, callback func(interfac
 		return err
 	}
 
-	for msg := range pubsub.Channel() {
+	for msg := range pubsub.Channel() { // 阻塞读取订阅的消息
 		callback(msg)
 	}
 
@@ -1061,7 +1063,7 @@ func (r *RedisCluster) AppendToSetPipelined(key string, values [][]byte) {
 		return
 	}
 
-	fixedKey := r.fixKey(key)
+	fixedKey := r.fixKey(key) // Key为analytics-iam-system-analytics
 	if err := r.up(); err != nil {
 		log.Debug(err.Error())
 
@@ -1071,7 +1073,7 @@ func (r *RedisCluster) AppendToSetPipelined(key string, values [][]byte) {
 
 	pipe := client.Pipeline()
 	for _, val := range values {
-		pipe.RPush(fixedKey, val)
+		pipe.RPush(fixedKey, val) // 所有的Key都是相同的,value是经msgpack序列化后的字节切片;RPush调用的是Redis的list(列表)
 	}
 
 	if _, err := pipe.Exec(); err != nil {

@@ -10,8 +10,9 @@ import (
 	v1 "github.com/marmotedu/api/apiserver/v1"
 	"github.com/marmotedu/component-base/pkg/fields"
 	metav1 "github.com/marmotedu/component-base/pkg/meta/v1"
-	"github.com/marmotedu/errors"
 	gorm "gorm.io/gorm"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pkg/code"
 	"github.com/marmotedu/iam/internal/pkg/util/gormutil"
@@ -44,7 +45,7 @@ func (u *users) Delete(ctx context.Context, username string, opts metav1.DeleteO
 	}
 
 	if opts.Unscoped {
-		u.db = u.db.Unscoped()
+		u.db = u.db.Unscoped() // 物理删除
 	}
 
 	err := u.db.Where("name = ?", username).Delete(&v1.User{}).Error

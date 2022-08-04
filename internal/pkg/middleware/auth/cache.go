@@ -12,7 +12,8 @@ import (
 	jwt "github.com/golang-jwt/jwt/v4"
 
 	"github.com/marmotedu/component-base/pkg/core"
-	"github.com/marmotedu/errors"
+
+	"github.com/marmotedu/iam/pkg/errors"
 
 	"github.com/marmotedu/iam/internal/pkg/code"
 	"github.com/marmotedu/iam/internal/pkg/middleware"
@@ -58,7 +59,7 @@ func (cache CacheStrategy) AuthFunc() gin.HandlerFunc {
 
 		var rawJWT string
 		// Parse the header to get the token part.
-		fmt.Sscanf(header, "Bearer %s", &rawJWT)
+		fmt.Sscanf(header, "Bearer %s", &rawJWT) // 扫描Header字符串,填充占位符,并占位符处赋值给rawJWT
 
 		// Use own validation logic, see below
 		var secret Secret
@@ -77,7 +78,7 @@ func (cache CacheStrategy) AuthFunc() gin.HandlerFunc {
 			}
 
 			var err error
-			secret, err = cache.get(kid)
+			secret, err = cache.get(kid) // 函数闭包,在内存中查询该secretID
 			if err != nil {
 				return nil, ErrMissingSecret
 			}
