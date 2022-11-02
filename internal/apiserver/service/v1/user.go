@@ -20,7 +20,7 @@ import (
 )
 
 // UserSrv defines functions used to handle user request.
-type UserSrv interface {
+type UserSrv interface { //User 产品定义,满足下列方法的作为User产品被生产
 	Create(ctx context.Context, user *v1.User, opts metav1.CreateOptions) error
 	Update(ctx context.Context, user *v1.User, opts metav1.UpdateOptions) error
 	Delete(ctx context.Context, username string, opts metav1.DeleteOptions) error
@@ -31,8 +31,8 @@ type UserSrv interface {
 	ChangePassword(ctx context.Context, user *v1.User) error
 }
 
-type userService struct {
-	store store.Factory
+type userService struct { //具体的实现产品
+	store store.Factory //依赖另一个工厂方法
 }
 
 var _ UserSrv = (*userService)(nil)
@@ -44,7 +44,7 @@ func newUsers(srv *service) *userService {
 // List returns user list in the storage. This function has a good performance.
 /*并发模板:.*/
 func (u *userService) List(ctx context.Context, opts metav1.ListOptions) (*v1.UserList, error) {
-	users, err := u.store.Users().List(ctx, opts)
+	users, err := u.store.Users().List(ctx, opts) //调用下一层的接口(仓库层的实例化得更早)
 	if err != nil {
 		log.L(ctx).Errorf("list users from storage failed: %s", err.Error())
 

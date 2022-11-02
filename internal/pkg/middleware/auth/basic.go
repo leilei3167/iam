@@ -19,7 +19,7 @@ import (
 
 // BasicStrategy defines Basic authentication strategy.
 type BasicStrategy struct {
-	compare func(username string, password string) bool
+	compare func(username string, password string) bool //验证密码的方法回调函数
 }
 
 var _ middleware.AuthStrategy = &BasicStrategy{}

@@ -20,7 +20,7 @@ const authHeaderCount = 2
 
 // AutoStrategy defines authentication strategy which can automatically choose between Basic and Bearer
 // according `Authorization` header.
-type AutoStrategy struct {
+type AutoStrategy struct { //自动策略,根据Header自动选择认证的策略
 	basic middleware.AuthStrategy
 	jwt   middleware.AuthStrategy
 }
@@ -28,7 +28,7 @@ type AutoStrategy struct {
 var _ middleware.AuthStrategy = &AutoStrategy{}
 
 // NewAutoStrategy create auto strategy with basic strategy and jwt strategy.
-func NewAutoStrategy(basic, jwt middleware.AuthStrategy) AutoStrategy {
+func NewAutoStrategy(basic, jwt middleware.AuthStrategy) AutoStrategy { //传入的是接口,而不是具体的策略实现的实例,因此basic和jwt的策略可以有多种实现(方便拓展)
 	return AutoStrategy{
 		basic: basic,
 		jwt:   jwt,
@@ -36,9 +36,9 @@ func NewAutoStrategy(basic, jwt middleware.AuthStrategy) AutoStrategy {
 }
 
 // AuthFunc defines auto strategy as the gin authentication middleware.
-func (a AutoStrategy) AuthFunc() gin.HandlerFunc {
+func (a AutoStrategy) AuthFunc() gin.HandlerFunc { //实现策略接口
 	return func(c *gin.Context) {
-		operator := middleware.AuthOperator{}
+		operator := middleware.AuthOperator{} //创建策略执行
 		authHeader := strings.SplitN(c.Request.Header.Get("Authorization"), " ", 2)
 
 		if len(authHeader) != authHeaderCount {
@@ -52,7 +52,7 @@ func (a AutoStrategy) AuthFunc() gin.HandlerFunc {
 			return
 		}
 		// 选择所需的策略
-		switch authHeader[0] {
+		switch authHeader[0] { //根据情况,判断所需要的策略
 		case "Basic":
 			operator.SetStrategy(a.basic)
 		case "Bearer":
@@ -64,7 +64,7 @@ func (a AutoStrategy) AuthFunc() gin.HandlerFunc {
 
 			return
 		}
-		// 策略执行者返回的是HandlerFunc,并再次传入c调用
+		//执行设置的策略,调用策略的逻辑(传入context),Basic或Bearer
 		operator.AuthFunc()(c)
 
 		c.Next()

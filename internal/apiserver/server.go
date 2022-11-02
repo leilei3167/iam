@@ -81,7 +81,7 @@ func createAPIServer(cfg *config.Config) (*apiServer, error) {
 }
 
 func (s *apiServer) PrepareRun() preparedAPIServer {
-	initRouter(s.genericAPIServer.Engine)
+	initRouter(s.genericAPIServer.Engine) //此处会初始化 控制层,所需要的仓库层已经于创建gRPC服务时注入
 
 	s.initRedisStore()
 

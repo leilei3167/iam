@@ -11,13 +11,13 @@ import (
 
 // UserController create a user handler used to handle request for user resource.
 type UserController struct {
-	srv srvv1.Service
+	srv srvv1.Service //依赖下层提供的工厂方法接口
 }
 
 // NewUserController creates a user handler.
 func NewUserController(store store.Factory) *UserController {
 	return &UserController{
-		srv: srvv1.NewService(store),
+		srv: srvv1.NewService(store), //服务层依赖仓库层
 	}
 }
 

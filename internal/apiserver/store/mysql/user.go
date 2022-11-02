@@ -18,7 +18,7 @@ import (
 	"github.com/marmotedu/iam/internal/pkg/util/gormutil"
 )
 
-type users struct {
+type users struct { //实现user产品
 	db *gorm.DB
 }
 

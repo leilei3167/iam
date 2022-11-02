@@ -65,25 +65,25 @@ func (cache CacheStrategy) AuthFunc() gin.HandlerFunc {
 		var secret Secret
 
 		claims := &jwt.MapClaims{}
-		// Verify the token
-		parsedT, err := jwt.ParseWithClaims(rawJWT, claims, func(token *jwt.Token) (interface{}, error) {
+		// Verify the token,验证该JWT Token
+		parsedT, err := jwt.ParseWithClaims(rawJWT, claims, func(token *jwt.Token) (interface{}, error) { //keyFunc是指明,如何获取密钥(此处从缓存中查询)
 			// Validate the alg is HMAC signature
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
-			kid, ok := token.Header["kid"].(string)
+			kid, ok := token.Header["kid"].(string) //解析出kid,kid 即为密钥 ID：secretID
 			if !ok {
 				return nil, ErrMissingKID
 			}
 
 			var err error
-			secret, err = cache.get(kid) // 函数闭包,在内存中查询该secretID
+			secret, err = cache.get(kid) //从缓存中根据secretID 查询对应的密钥信息
 			if err != nil {
 				return nil, ErrMissingSecret
 			}
 
-			return []byte(secret.Key), nil
+			return []byte(secret.Key), nil //获取到secretID对应的密钥后,对JWT的第三段进行签名验证
 		})
 		if err != nil || !parsedT.Valid {
 			core.WriteResponse(c, errors.WithCode(code.ErrSignatureInvalid, err.Error()), nil)
@@ -91,7 +91,7 @@ func (cache CacheStrategy) AuthFunc() gin.HandlerFunc {
 
 			return
 		}
-
+		//验证通过后 检查是否过期
 		if KeyExpired(secret.Expires) {
 			tm := time.Unix(secret.Expires, 0).Format("2006-01-02 15:04:05")
 			core.WriteResponse(c, errors.WithCode(code.ErrExpired, "expired at: %s", tm), nil)
@@ -100,6 +100,7 @@ func (cache CacheStrategy) AuthFunc() gin.HandlerFunc {
 			return
 		}
 
+		//未过期 设置Header 增加username: colin
 		c.Set(middleware.UsernameKey, secret.Username)
 		c.Next()
 	}

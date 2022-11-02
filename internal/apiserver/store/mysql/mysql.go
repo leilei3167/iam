@@ -19,7 +19,7 @@ import (
 	"github.com/marmotedu/iam/pkg/db"
 )
 
-type datastore struct {
+type datastore struct { //实现Factory工厂,产品的不同实现
 	db *gorm.DB
 
 	// can include two database instance if needed
@@ -53,12 +53,12 @@ func (ds *datastore) Close() error {
 }
 
 var (
-	mysqlFactory store.Factory
+	mysqlFactory store.Factory //单例
 	once         sync.Once
 )
 
 // GetMySQLFactoryOr create mysql factory with the given config.
-func GetMySQLFactoryOr(opts *genericoptions.MySQLOptions) (store.Factory, error) {
+func GetMySQLFactoryOr(opts *genericoptions.MySQLOptions) (store.Factory, error) { //此处返回Factory工厂的mysql实现
 	if opts == nil && mysqlFactory == nil {
 		return nil, fmt.Errorf("failed to get mysql store fatory")
 	}

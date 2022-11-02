@@ -11,8 +11,8 @@ import "github.com/marmotedu/iam/internal/apiserver/store"
 // Service defines functions used to return resource interface.
 // 工厂方法模式,一个接口包含多个接口的实现
 // 此处Service就相当于是一个工厂抽象接口.
-type Service interface {
-	Users() UserSrv // 生产UserSrv实例的方法
+type Service interface { //生产多种产品的方法列表
+	Users() UserSrv // 生产UserSrv产品的方法
 	Secrets() SecretSrv
 	Policies() PolicySrv
 }
@@ -22,13 +22,13 @@ type service struct { // 实现工厂接口
 }
 
 // NewService returns Service interface.
-func NewService(store store.Factory) Service {
+func NewService(store store.Factory) Service { //初始化工厂
 	return &service{
 		store: store,
 	}
 }
 
-func (s *service) Users() UserSrv {
+func (s *service) Users() UserSrv { //UserSrv产品
 	return newUsers(s)
 }
 

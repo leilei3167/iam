@@ -37,7 +37,7 @@ func (u *UserController) Create(c *gin.Context) {
 		return
 	}
 
-	r.Password, _ = auth.Encrypt(r.Password)
+	r.Password, _ = auth.Encrypt(r.Password) //存入数据库的密码一定是bcrypt加密后的
 	r.Status = 1
 	r.LoginedAt = time.Now()
 

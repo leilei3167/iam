@@ -15,7 +15,7 @@ import (
 const AuthzAudience = "iam.authz.marmotedu.com"
 
 // JWTStrategy defines jwt bearer authentication strategy.
-type JWTStrategy struct {
+type JWTStrategy struct { //JWT认证策略
 	ginjwt.GinJWTMiddleware
 }
 
@@ -28,5 +28,5 @@ func NewJWTStrategy(gjwt ginjwt.GinJWTMiddleware) JWTStrategy {
 
 // AuthFunc defines jwt bearer strategy as the gin authentication middleware.
 func (j JWTStrategy) AuthFunc() gin.HandlerFunc {
-	return j.MiddlewareFunc()
+	return j.MiddlewareFunc() //如果Header中有"Bearer"字段,则会调用此处,用于apiserver的Bearer认证
 }

@@ -36,10 +36,10 @@ type loginInfo struct {
 	Password string `form:"password" json:"password" binding:"required,password"`
 }
 
-func newBasicAuth() middleware.AuthStrategy {
-	return auth.NewBasicStrategy(func(username string, password string) bool {
+func newBasicAuth() middleware.AuthStrategy { //初始化基本认证的策略实现的实例
+	return auth.NewBasicStrategy(func(username string, password string) bool { //定义basic认证的密码校验方式
 		// fetch user from database
-		user, err := store.Client().Users().Get(context.TODO(), username, metav1.GetOptions{})
+		user, err := store.Client().Users().Get(context.TODO(), username, metav1.GetOptions{}) //仓库层提供一个Client方法,使得其他地方能够访问数据库(仅限于中间件)
 		if err != nil {
 			return false
 		}
@@ -50,33 +50,33 @@ func newBasicAuth() middleware.AuthStrategy {
 		}
 
 		user.LoginedAt = time.Now()
-		_ = store.Client().Users().Update(context.TODO(), user, metav1.UpdateOptions{})
+		_ = store.Client().Users().Update(context.TODO(), user, metav1.UpdateOptions{}) //更新登录时间
 
 		return true
 	})
 }
 
-func newJWTAuth() middleware.AuthStrategy {
+func newJWTAuth() middleware.AuthStrategy { //初始化JWT认证策略的实例
 	ginjwt, _ := jwt.New(&jwt.GinJWTMiddleware{
-		Realm:            viper.GetString("jwt.Realm"),
+		Realm:            viper.GetString("jwt.Realm"), //直接从viper中读取
 		SigningAlgorithm: "HS256",
-		Key:              []byte(viper.GetString("jwt.key")),
+		Key:              []byte(viper.GetString("jwt.key")), //签发api的登录状态的jwt
 		Timeout:          viper.GetDuration("jwt.timeout"),
 		MaxRefresh:       viper.GetDuration("jwt.max-refresh"),
-		Authenticator:    authenticator(),
+		Authenticator:    authenticator(), //登录时调用
 		LoginResponse:    loginResponse(),
 		LogoutResponse: func(c *gin.Context, code int) {
 			c.JSON(http.StatusOK, nil)
 		},
 		RefreshResponse: refreshResponse(),
 		PayloadFunc:     payloadFunc(),
-		IdentityHandler: func(c *gin.Context) interface{} {
-			claims := jwt.ExtractClaims(c)
+		IdentityHandler: func(c *gin.Context) interface{} { //在gin.Context中添加的一个键,设置为username
+			claims := jwt.ExtractClaims(c) //上述函数会从 Token 的 Payload 中获取 identity 域的值，identity 域的值是在签发 Token 时指定的，它的值其实是用户名，你可以查看payloadFunc函数了解。
 
 			return claims[jwt.IdentityKey]
 		},
 		IdentityKey:  middleware.UsernameKey,
-		Authorizator: authorizator(),
+		Authorizator: authorizator(), //验证的方法
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{
 				"message": message,
@@ -92,7 +92,7 @@ func newJWTAuth() middleware.AuthStrategy {
 	return auth.NewJWTStrategy(*ginjwt)
 }
 
-func newAutoAuth() middleware.AuthStrategy {
+func newAutoAuth() middleware.AuthStrategy { //返回的都是接口,调用者不用关心底层实现,只需调用其AuthFunc方法即可
 	return auth.NewAutoStrategy(newBasicAuth().(auth.BasicStrategy), newJWTAuth().(auth.JWTStrategy))
 }
 
@@ -101,7 +101,7 @@ func authenticator() func(c *gin.Context) (interface{}, error) {
 		var login loginInfo
 		var err error
 
-		// support header and body both
+		// support header and body both,支持从Header或Body中获取账户和密码
 		if c.Request.Header.Get("Authorization") != "" {
 			login, err = parseWithHeader(c)
 		} else {
@@ -111,7 +111,7 @@ func authenticator() func(c *gin.Context) (interface{}, error) {
 			return "", jwt.ErrFailedAuthentication
 		}
 
-		// Get the user information by the login username.
+		// Get the user information by the login username. 根据用户名查询得到信息
 		user, err := store.Client().Users().Get(c, login.Username, metav1.GetOptions{})
 		if err != nil {
 			log.Errorf("get user information failed: %s", err.Error())
@@ -119,7 +119,7 @@ func authenticator() func(c *gin.Context) (interface{}, error) {
 			return "", jwt.ErrFailedAuthentication
 		}
 
-		// Compare the login password with the user password.
+		// Compare the login password with the user password.将登录输入的密码和查询得到的加密后的密码进行对比
 		if err := user.Compare(login.Password); err != nil {
 			return "", jwt.ErrFailedAuthentication
 		}
@@ -132,6 +132,7 @@ func authenticator() func(c *gin.Context) (interface{}, error) {
 }
 
 func parseWithHeader(c *gin.Context) (loginInfo, error) {
+	//"Authorization: Basic YWRtaW46QWRtaW5AMjAyMQ=="
 	auth := strings.SplitN(c.Request.Header.Get("Authorization"), " ", 2)
 	if len(auth) != 2 || auth[0] != "Basic" {
 		log.Errorf("get basic string from Authorization header failed")
@@ -139,14 +140,14 @@ func parseWithHeader(c *gin.Context) (loginInfo, error) {
 		return loginInfo{}, jwt.ErrFailedAuthentication
 	}
 
-	payload, err := base64.StdEncoding.DecodeString(auth[1])
+	payload, err := base64.StdEncoding.DecodeString(auth[1]) //解码YWRtaW46QWRtaW5AMjAyMQ==得到 admin:Admin@2021
 	if err != nil {
 		log.Errorf("decode basic string: %s", err.Error())
 
 		return loginInfo{}, jwt.ErrFailedAuthentication
 	}
 
-	pair := strings.SplitN(string(payload), ":", 2)
+	pair := strings.SplitN(string(payload), ":", 2) //admin:Admin@2021
 	if len(pair) != 2 {
 		log.Errorf("parse payload failed")
 
@@ -194,7 +195,7 @@ func payloadFunc() func(data interface{}) jwt.MapClaims {
 			"iss": APIServerIssuer,
 			"aud": APIServerAudience,
 		}
-		if u, ok := data.(*v1.User); ok {
+		if u, ok := data.(*v1.User); ok { //只取user的一部分脱敏信息
 			claims[jwt.IdentityKey] = u.Name
 			claims["sub"] = u.Name
 		}
