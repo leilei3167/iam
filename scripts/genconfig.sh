@@ -8,7 +8,8 @@
 # 示例：genconfig.sh scripts/environment.sh configs/iam-apiserver.yaml
 
 env_file="$1"
-template_file="$2"#在configs目录中只是一个模板文件
+#在configs目录中只是一个模板文件
+template_file="$2"
 
 IAM_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
@@ -19,7 +20,7 @@ if [ $# -ne 2 ];then # 需要指定环境变量的脚本和模板文件
     exit 1
 fi
 
-source "${env_file}"#注入环境变量
+source "${env_file}"
 
 declare -A envs
 

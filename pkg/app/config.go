@@ -41,6 +41,7 @@ func addConfigFlag(basename string, fs *pflag.FlagSet) {
 			viper.SetConfigFile(cfgFile)
 		} else { // 否则此处设置默认的 寻找配置文件的路径
 			viper.AddConfigPath(".")
+			viper.AddConfigPath("./dev") //便于搭建测试环境,dev中保留了一份测试用的配置文件
 
 			if names := strings.Split(basename, "-"); len(names) > 1 {
 				viper.AddConfigPath(filepath.Join(homedir.HomeDir(), "."+names[0]))

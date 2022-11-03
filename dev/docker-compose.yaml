@@ -1,0 +1,49 @@
+version: "3"
+
+networks:
+  app:
+    driver: bridge
+# 用于快速搭建测试环境
+# MariaDB创建好后记得执行configs中的sql文件
+services:
+  mariaDB:
+    image: 'mariadb:latest'
+    container_name: mb
+    hostname: mb
+    networks:
+      - app
+    ports:
+      - "3306:3306"
+    environment:
+      - MARIADB_ROOT_PASSWORD=123456
+      - MARIADB_DATABASE=ture
+
+  redis:
+    image: 'redis:latest'
+    container_name: rdis
+    hostname: rdis
+    networks:
+      - app
+    ports:
+      - "6379:6379"
+    command: ["redis-server","--requirepass","123456"]
+
+
+  mongo:
+    image: 'mongo:5.0'
+    container_name: rds
+    hostname: rds
+    networks:
+      - app
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 123456
+      MONGO_INITDB_DATABASE: "iam_analytics"
+
+
+
+
+
+

@@ -46,5 +46,5 @@ log:
     enable-color: true # 是否开启颜色输出，true:是，false:否    
     disable-caller: false # 是否开启 caller，如果开启会在日志中显示调用日志所在的文件、函数和行号    
     disable-stacktrace: false # 是否再panic及以上级别禁止打印堆栈信息    
-    output-paths: ${IAM_LOG_DIR}/iam-watcher.log,stdout # 多个输出，逗号分开。stdout：标准输出，    
-    error-output-paths: ${IAM_LOG_DIR}/iam-watcher.error.log # zap内部(非业务)错误日志输出路径，多个输出，逗号分开  
+    output-paths: stdout # 多个输出，逗号分开。stdout：标准输出，
+    error-output-paths: stderr # zap内部(非业务)错误日志输出路径，多个输出，逗号分开

@@ -50,7 +50,7 @@ func (u *users) Delete(ctx context.Context, username string, opts metav1.DeleteO
 
 	err := u.db.Where("name = ?", username).Delete(&v1.User{}).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return errors.WithCode(code.ErrDatabase, err.Error())
+		return errors.WithCode(code.ErrDatabase, err.Error()) //FIXME:The user specified as a definer ('iam'@'127.0.0.1') does not exist
 	}
 
 	return nil

@@ -13,7 +13,7 @@ IAM_ROOT=$(dirname "${BASH_SOURCE[0]}")/../..
 LOCAL_OUTPUT_ROOT="${IAM_ROOT}/${OUT_DIR:-_output}"
 
 # 设置统一的密码，方便记忆
-readonly PASSWORD=${PASSWORD:-'iam59!z$'}
+readonly PASSWORD=${PASSWORD:-'123456'}
 
 # Linux系统 going 用户
 readonly LINUX_USERNAME=${LINUX_USERNAME:-going}
@@ -30,7 +30,7 @@ readonly MARIADB_ADMIN_USERNAME=${MARIADB_ADMIN_USERNAME:-root} # MariaDB root �
 readonly MARIADB_ADMIN_PASSWORD=${MARIADB_ADMIN_PASSWORD:-${PASSWORD}} # MariaDB root 用户密码
 readonly MARIADB_HOST=${MARIADB_HOST:-127.0.0.1:3306} # MariaDB 主机地址
 readonly MARIADB_DATABASE=${MARIADB_DATABASE:-iam} # MariaDB iam 应用使用的数据库名
-readonly MARIADB_USERNAME=${MARIADB_USERNAME:-iam} # iam 数据库用户名
+readonly MARIADB_USERNAME=${MARIADB_USERNAME:-root} # iam 数据库用户名,数据库为了方便设置为root,仅用于测试方便,应该单独设置账户限制权限
 readonly MARIADB_PASSWORD=${MARIADB_PASSWORD:-${PASSWORD}} # iam 数据库密码
 
 # Redis 配置信息
@@ -44,13 +44,13 @@ readonly MONGO_ADMIN_USERNAME=${MONGO_ADMIN_USERNAME:-root} # MongoDB root 用�
 readonly MONGO_ADMIN_PASSWORD=${MONGO_ADMIN_PASSWORD:-${PASSWORD}} # MongoDB root 用户密码
 readonly MONGO_HOST=${MONGO_HOST:-127.0.0.1} # MongoDB 地址
 readonly MONGO_PORT=${MONGO_PORT:-27017} # MongoDB 端口
-readonly MONGO_USERNAME=${MONGO_USERNAME:-iam} # MongoDB 用户名
+readonly MONGO_USERNAME=${MONGO_USERNAME:-root} # MongoDB 用户名
 readonly MONGO_PASSWORD=${MONGO_PASSWORD:-${PASSWORD}} # MongoDB 密码
 
 # iam 配置
 readonly IAM_DATA_DIR=${IAM_DATA_DIR:-/data/iam} # iam 各组件数据目录
 readonly IAM_INSTALL_DIR=${IAM_INSTALL_DIR:-/opt/iam} # iam 安装文件存放目录
-readonly IAM_CONFIG_DIR=${IAM_CONFIG_DIR:-/etc/iam} # iam 配置文件存放目录
+readonly IAM_CONFIG_DIR=${IAM_CONFIG_DIR:-${IAM_ROOT}/dev} # iam 配置文件存放目录,生产环境是/etc/iam
 readonly IAM_LOG_DIR=${IAM_LOG_DIR:-/var/log/iam} # iam 日志文件存放目录
 readonly CA_FILE=${CA_FILE:-${IAM_CONFIG_DIR}/cert/ca.pem} # CA
 
@@ -79,7 +79,7 @@ readonly IAM_AUTHZ_SERVER_RPCSERVER=${IAM_AUTHZ_SERVER_RPCSERVER:-${IAM_APISERVE
 # iam-pump 配置
 readonly IAM_PUMP_HOST=${IAM_PUMP_HOST:-127.0.0.1} # iam-pump 部署机器 IP 地址
 readonly IAM_PUMP_COLLECTION_NAME=${IAM_PUMP_COLLECTION_NAME:-iam_analytics}
-readonly IAM_PUMP_MONGO_URL=${IAM_PUMP_MONGO_URL:-mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/${IAM_PUMP_COLLECTION_NAME}?authSource=${IAM_PUMP_COLLECTION_NAME}}
+readonly IAM_PUMP_MONGO_URL=${IAM_PUMP_MONGO_URL:-mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/${IAM_PUMP_COLLECTION_NAME}?authSource=admin} # authSource为方便设置为admin
 
 # iam-watcher配置
 readonly IAM_WATCHER_HOST=${IAM_WATCHER_HOST:-127.0.0.1} # iam-watcher 部署机器 IP 地址

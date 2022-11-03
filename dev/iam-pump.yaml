@@ -10,9 +10,9 @@ omit-detailed-recording: true # 设置为 true 会记录详细的授权审计日
 
 # Redis 配置
 redis:
-  host: ${REDIS_HOST} # redis 地址，默认 127.0.0.1:6379
-  port: ${REDIS_PORT} # redis 端口，默认 6379
-  password: ${REDIS_PASSWORD} # redis 密码
+  host: 127.0.0.1 # redis 地址，默认 127.0.0.1:6379
+  port: 6379 # redis 端口，默认 6379
+  password: 123456 # redis 密码
   database: 0 # redis 数据库
   optimisation-max-idle: 100 # redis 连接池中的最大空闲连接数
   optimisation-max-active: 0 # 最大活跃连接数
@@ -29,10 +29,11 @@ pumps:
   mongo: #Key
     type: mongo # pump 类型
     meta:
-      collection_name: ${IAM_PUMP_COLLECTION_NAME} # mongodb collection name
-      mongo_url: ${IAM_PUMP_MONGO_URL} # mongodb url
+      collection_name: iam_analytics # mongodb collection name
+      mongo_url: mongodb://root:123456@127.0.0.1:27017/iam_analytics?authSource=admin # mongodb url
       collection_cap_max_size_bytes: 1048576 # 设置最大的capped collection
       collection_cap_enable: true
+
 
 log:
   name: pump # Logger的名字
