@@ -27,7 +27,7 @@ const (
 	defaultRedisAddress = "127.0.0.1:6379"
 )
 
-var redisClusterSingleton redis.UniversalClient
+var redisClusterSingleton redis.UniversalClient //全局的Redis客户端
 
 // RedisClusterStorageManager is a storage manager that uses the redis database.
 type RedisClusterStorageManager struct {
@@ -268,7 +268,7 @@ func (r *RedisClusterStorageManager) fixKey(keyName string) string {
 func (r *RedisClusterStorageManager) GetAndDeleteSet(keyName string) []interface{} {
 	log.Debugf("Getting raw key set: %s", keyName)
 
-	if r.db == nil {
+	if r.db == nil { //确保持有redis客户端
 		log.Warn("Connection dropped, connecting..")
 		r.Connect()
 
@@ -283,8 +283,8 @@ func (r *RedisClusterStorageManager) GetAndDeleteSet(keyName string) []interface
 
 	var lrange *redis.StringSliceCmd
 	_, err := r.db.TxPipelined(func(pipe redis.Pipeliner) error {
-		lrange = pipe.LRange(fixedKey, 0, -1)
-		pipe.Del(fixedKey)
+		lrange = pipe.LRange(fixedKey, 0, -1) //批量取出数据
+		pipe.Del(fixedKey)                    //取出后删除
 
 		return nil
 	})

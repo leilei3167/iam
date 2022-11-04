@@ -18,11 +18,12 @@ import (
 )
 
 // Publish publish a redis event to specified redis channel when some action occurred.
+// TODO:学习redis的用法
 func Publish() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Next()
+		c.Next() //先执行
 
-		if c.Writer.Status() != http.StatusOK {
+		if c.Writer.Status() != http.StatusOK { //执行未成功,则不进行消息发布
 			log.L(c).Debugf("request failed with http status code `%d`, ignore publish message", c.Writer.Status())
 
 			return
@@ -37,7 +38,7 @@ func Publish() gin.HandlerFunc {
 
 		method := c.Request.Method
 
-		switch resource {
+		switch resource { //发布消息
 		case "policies":
 			notify(c, method, load.NoticePolicyChanged)
 		case "secrets":
@@ -48,9 +49,9 @@ func Publish() gin.HandlerFunc {
 }
 
 func notify(ctx context.Context, method string, command load.NotificationCommand) {
-	switch method {
+	switch method { //仅仅针对修改的方法
 	case http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch:
-		redisStore := &storage.RedisCluster{}
+		redisStore := &storage.RedisCluster{} //isCache 为false,使用的非cache客户端,使用Redis必须通过RedisCluster
 		message, _ := json.Marshal(load.Notification{Command: command})
 
 		if err := redisStore.Publish(load.RedisPubSubChannel, string(message)); err != nil {

@@ -7,7 +7,7 @@ package storage
 
 // AnalyticsStorage defines the analytics storage interface
 // 上游的数据来源抽象为接口.
-type AnalyticsStorage interface {
+type AnalyticsStorage interface { //抽象的上游数据接口
 	Init(config interface{}) error
 	GetName() string
 	Connect() bool

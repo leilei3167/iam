@@ -74,8 +74,8 @@ func installController(g *gin.Engine) *gin.Engine { // 注册处理器的关键�
 		v1.Use(auto.AuthFunc()) //TODO:v1.Use为何要在此处?
 
 		// policy RESTful resource
-		policyv1 := v1.Group("/policies", middleware.Publish())
-		{ // 策略相关接口
+		policyv1 := v1.Group("/policies", middleware.Publish()) //对于policy和secret的变化触发redis的发布,是以中间件的形式提供的
+		{                                                       // 策略相关接口
 			policyController := policy.NewPolicyController(storeIns)
 
 			policyv1.POST("", policyController.Create)

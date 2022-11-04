@@ -88,7 +88,7 @@ func GetAnalytics() *Analytics {
 
 // Start start the analytics service.
 func (r *Analytics) Start() {
-	r.store.Connect()
+	r.store.Connect() //连接到存储目的地(此处为redis)
 
 	// start worker pool
 	atomic.SwapUint32(&r.shouldStop, 0)
@@ -137,7 +137,7 @@ func (r *Analytics) recordWorker() {
 	for {
 		var readyToSend bool
 		select {
-		case record, ok := <-r.recordsChan:
+		case record, ok := <-r.recordsChan: //来自于鉴权api调用RecordHit方法
 			// check if channel was closed and it is time to exit from worker
 			if !ok { // 支持优雅退出,通道关闭时,将当前缓冲区的数据发送完毕再退出
 				// send what is left in buffer,将缓冲中剩余的数据发送

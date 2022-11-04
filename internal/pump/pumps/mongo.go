@@ -40,9 +40,9 @@ const (
 
 // MongoPump defines a mongo pump with mongo specific options and common options.
 type MongoPump struct {
-	dbSession *mgo.Session
-	dbConf    *MongoConf
-	CommonPumpConfig
+	dbSession        *mgo.Session
+	dbConf           *MongoConf
+	CommonPumpConfig //将各种pump都应该具有的简单方法,定义为一个CommonPumpConfig基类
 }
 
 var mongoPumpPrefix = "PMP_MONGO"

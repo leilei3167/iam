@@ -177,13 +177,14 @@ func (s *GenericAPIServer) Run() error {
 	})
 
 	// Ping the server to make sure the router is working.
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if s.healthz {
-		if err := s.ping(ctx); err != nil {
-			return err
-		}
-	}
+	//ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	//defer cancel()
+	////TODO:为了调试,暂时关闭
+	//if s.healthz {
+	//	if err := s.ping(ctx); err != nil {
+	//		return err
+	//	}
+	//}
 
 	if err := eg.Wait(); err != nil {
 		log.Fatal(err.Error())

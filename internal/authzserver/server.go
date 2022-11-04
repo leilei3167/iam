@@ -23,7 +23,7 @@ import (
 )
 
 // RedisKeyPrefix defines the prefix key in redis for analytics data.
-const RedisKeyPrefix = "analytics-"
+const RedisKeyPrefix = "analytics-" //和pump中定义的一致
 
 type authzServer struct {
 	gs               *shutdown.GracefulShutdown
@@ -139,8 +139,8 @@ func (s *authzServer) initialize() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.redisCancelFunc = cancel
 
-	// keep redis connected;使用Redis配置连接Redis(动态的维护2个Redis集群)
-	go storage.ConnectToRedis(ctx, s.buildStorageConfig()) // Redis用于订阅apiserver,如果apiserver发生了对数据库的写操作,则会收到通知,进行一次缓存的更新
+	// keep redis connected;使用Redis配置连接Redis(动态的维护2个Redis集群),并且会一直保持连接
+	go storage.ConnectToRedis(ctx, s.buildStorageConfig())
 
 	// cron to reload all secrets and policies from iam-apiserver
 	// 创建gRPC客户端,并初始化本地内存缓存(同时实现Loader接口)
@@ -149,7 +149,7 @@ func (s *authzServer) initialize() error {
 		return errors.Wrap(err, "get cache instance failed")
 	}
 
-	load.NewLoader(ctx, cacheIns).Start() // 同步服务;TODO:学习 1.Redis的服务被抽象成统一的服务,在pkg/storage中;2.事件驱动的同步服务实现方式
+	load.NewLoader(ctx, cacheIns).Start() // 同步服务; TODO:学习 1.Redis的服务被抽象成统一的服务,在pkg/storage中;2.事件驱动的同步服务实现方式
 
 	// 数据上报功能的开关 设置为 true 后 iam-authz-server 会向Redis上报授权审计日志
 	// 因为数据上报会影响性能,因此需要设计为可配置的
@@ -163,8 +163,8 @@ func (s *authzServer) initialize() error {
 	// 3.数据采集后需要存储到下游系统。在存储之前，我们需要对数据进行不同的处理，并可能会存储到不同的下游系统，这种可变的需求如何满足？
 	if s.analyticsOptions.Enable {
 		analyticsStore := storage.RedisCluster{
-			KeyPrefix: RedisKeyPrefix,
-		} // 设置key前缀;RedisCluster实现了AnalyticsHandler接口
+			KeyPrefix: RedisKeyPrefix, //投入的key的前缀(和Pump中的一致)
+		}                                                                           // 设置key前缀;RedisCluster实现了AnalyticsHandler接口
 		analyticsIns := analytics.NewAnalytics(s.analyticsOptions, &analyticsStore) // 创建数据上报服务
 		analyticsIns.Start()
 	}

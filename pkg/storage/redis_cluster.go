@@ -43,12 +43,13 @@ type Config struct {
 var ErrRedisIsDown = errors.New("storage: Redis is either down or ws not configured")
 
 var (
+	//atomic.Value可以存储任意数据,并且通过对应的方法可以保证并发安全
 	singlePool      atomic.Value // 非cache的Redis客户端
 	singleCachePool atomic.Value // 用于作为cache的Redis客户端
 	redisUp         atomic.Value // 保存redis的状态
 )
 
-var disableRedis atomic.Value
+var disableRedis atomic.Value //状态量,是否处于关闭状态
 
 // DisableRedis very handy when testsing it allows to dynamically enable/disable talking with redisW.
 func DisableRedis(ok bool) {
@@ -62,9 +63,9 @@ func DisableRedis(ok bool) {
 	disableRedis.Store(false)
 }
 
-func shouldConnect() bool {
+func shouldConnect() bool { //
 	if v := disableRedis.Load(); v != nil {
-		return !v.(bool) // 如果是关闭Redis的模式,则不应该重连至Redis
+		return !v.(bool) // disableRedis为true,则shouldConnect应该为false
 	}
 
 	return true
@@ -80,7 +81,7 @@ func Connected() bool {
 }
 
 func singleton(cache bool) redis.UniversalClient {
-	// 检查是否已经有Redis的客户端示例,如有返回,没有则返回nil
+	// 检查singlePool和singleCachePool是否已经有Redis的客户端示例,如有返回,没有则返回nil
 	if cache {
 		v := singleCachePool.Load()
 		if v != nil {
@@ -96,15 +97,16 @@ func singleton(cache bool) redis.UniversalClient {
 	return nil
 }
 
+// 创建Redis的客户端,存放在atomic.Value中
 func connectSingleton(cache bool, config *Config) bool {
 	if singleton(cache) == nil { // 未初始化,则使用配置文件创建Redis
 		log.Debug("Connecting to redis cluster")
-		if cache {
-			singleCachePool.Store(NewRedisClusterPool(cache, config)) // Redis集群池
+		if cache { //如果cache为true,创建一个redis客户端
+			singleCachePool.Store(NewRedisClusterPool(cache, config)) // 根据配置文件,创建对应的redis客户端(不同客户端都实现统一接口)
 
 			return true
 		}
-		singlePool.Store(NewRedisClusterPool(cache, config))
+		singlePool.Store(NewRedisClusterPool(cache, config)) //cache不为true 也会创建一个客户端
 
 		return true
 	}
@@ -120,7 +122,8 @@ type RedisCluster struct {
 }
 
 func clusterConnectionIsOpen(cluster RedisCluster) bool {
-	c := singleton(cluster.IsCache)
+	c := singleton(cluster.IsCache) //获取对应的Redis客户端(接口实例)
+	//向其中放入一个Key,并读取,来检查redis是否正常
 	testKey := "redis-test-" + uuid.Must(uuid.NewV4()).String()
 	if err := c.Set(testKey, "test", time.Second).Err(); err != nil {
 		log.Warnf("Error trying to set test key: %s", err.Error())
@@ -138,10 +141,11 @@ func clusterConnectionIsOpen(cluster RedisCluster) bool {
 
 // ConnectToRedis starts a go routine that periodically tries to connect to redis.
 func ConnectToRedis(ctx context.Context, config *Config) {
-	tick := time.NewTicker(time.Second)
+	tick := time.NewTicker(time.Second) //每隔一秒检测一次连接
 	defer tick.Stop()
 	c := []RedisCluster{
-		{}, {IsCache: true}, // TODO:为什么此处会创建2个Redis的连接池,一个普通的,一个用于cache
+		{},
+		{IsCache: true},
 	}
 	var ok bool
 	for _, v := range c {
@@ -157,35 +161,37 @@ func ConnectToRedis(ctx context.Context, config *Config) {
 		ok = true
 	}
 	redisUp.Store(ok)
-again:
+	//以上会根据c的设置 创建指定个数的redis的客户端,接下来执行redis的连接检测和维护
+again: //动态检查维护Redis的连接
 	for {
 		select {
-		case <-ctx.Done(): // 结束循环
+		case <-ctx.Done(): // 结束循环(优雅退出被触发)
 			return
 		case <-tick.C: // 每秒,检查是否需要重新建立连接
 			if !shouldConnect() { // 判断是否处于关闭Redis的模式(Redis可以动态的关闭),如果是,则不进行重连;否则进行重连
-				continue
+				continue //跳过重连
 			}
 			for _, v := range c {
-				if !connectSingleton(v.IsCache, config) {
+				if !connectSingleton(v.IsCache, config) { //检查Redis的客户端是否在Value中,此处永远为true
 					redisUp.Store(false)
 
 					goto again
 				}
 
-				if !clusterConnectionIsOpen(v) { // 检查连接,不能正常操作则重试
+				if !clusterConnectionIsOpen(v) { //检查对应的RedisCluster
 					redisUp.Store(false)
-
+					//连接不正常,则重试,直到正常为止
 					goto again
 				}
 			}
+			//两个链接都正常才设置为true
 			redisUp.Store(true)
 		}
 	}
 }
 
 // NewRedisClusterPool create a redis cluster pool.
-// 根据配置文件创建不同的Redis客户端.
+// 根据配置文件创建不同的Redis客户端,返回实现redis.UniversalClient的实例
 func NewRedisClusterPool(isCache bool, config *Config) redis.UniversalClient {
 	// redisSingletonMu is locked and we know the singleton is nil
 	log.Debug("Creating new Redis connection pool")
@@ -211,7 +217,7 @@ func NewRedisClusterPool(isCache bool, config *Config) redis.UniversalClient {
 	}
 
 	var client redis.UniversalClient
-	opts := &RedisOpts{
+	opts := &RedisOpts{ //底层是redis.UniversalOptions,但是为了便于创建不同的redis客户端配置,定义了一个RedisOpts,以方法的形式创建不同的配置
 		Addrs:        getRedisAddrs(config),
 		MasterName:   config.MasterName,
 		Password:     config.Password,
@@ -223,7 +229,7 @@ func NewRedisClusterPool(isCache bool, config *Config) redis.UniversalClient {
 		PoolSize:     poolSize, // 连接池 默认500
 		TLSConfig:    tlsConfig,
 	}
-	// 根据配置来创建不同的Redis实例
+	// 根据配置来创建不同的Redis实例,不同的实例均实现redis.UniversalClient接口
 	if opts.MasterName != "" {
 		log.Info("--> [REDIS] Creating sentinel-backed failover client")
 		client = redis.NewFailoverClient(opts.failover())
@@ -232,7 +238,7 @@ func NewRedisClusterPool(isCache bool, config *Config) redis.UniversalClient {
 		client = redis.NewClusterClient(opts.cluster())
 	} else { // 单节点Redis
 		log.Info("--> [REDIS] Creating single-node client")
-		client = redis.NewClient(opts.simple())
+		client = redis.NewClient(opts.simple()) //使用单节点的配置创建Redis实例
 	}
 
 	return client
@@ -294,7 +300,7 @@ func (o *RedisOpts) cluster() *redis.ClusterOptions {
 func (o *RedisOpts) simple() *redis.Options {
 	addr := "127.0.0.1:6379"
 	if len(o.Addrs) > 0 {
-		addr = o.Addrs[0]
+		addr = o.Addrs[0] //单节点,只取第一个地址
 	}
 
 	return &redis.Options{
@@ -361,7 +367,7 @@ func (r *RedisCluster) Connect() bool {
 }
 
 func (r *RedisCluster) singleton() redis.UniversalClient {
-	return singleton(r.IsCache)
+	return singleton(r.IsCache) //返回全局的Redis客户端(atomic.Value中)
 }
 
 func (r *RedisCluster) hashKey(in string) string {
@@ -923,10 +929,10 @@ func (r *RedisCluster) StartPubSubHandler(channel string, callback func(interfac
 
 // Publish publish a message to the specify channel.
 func (r *RedisCluster) Publish(channel, message string) error {
-	if err := r.up(); err != nil {
+	if err := r.up(); err != nil { //先判断redis是否正常
 		return err
 	}
-	err := r.singleton().Publish(channel, message).Err()
+	err := r.singleton().Publish(channel, message).Err() //调用 redis.UniversalClient 接口的方法
 	if err != nil {
 		log.Errorf("Error trying to set value: %s", err.Error())
 
@@ -1069,14 +1075,14 @@ func (r *RedisCluster) AppendToSetPipelined(key string, values [][]byte) {
 
 		return
 	}
-	client := r.singleton()
+	client := r.singleton() //获取redis客户端
 
-	pipe := client.Pipeline()
+	pipe := client.Pipeline() //Pipeline非常适用于需要执行一系列命令的情况,将其组成Pipeline执行一次而不是循环一条一条的去执行
 	for _, val := range values {
 		pipe.RPush(fixedKey, val) // 所有的Key都是相同的,value是经msgpack序列化后的字节切片;RPush调用的是Redis的list(列表)
 	}
 
-	if _, err := pipe.Exec(); err != nil {
+	if _, err := pipe.Exec(); err != nil { //执行Redis的Pipeline
 		log.Errorf("Error trying to append to set keys: %s", err.Error())
 	}
 

@@ -205,5 +205,5 @@ func (s *apiServer) initRedisStore() {
 	}
 
 	// try to connect to redis
-	go storage.ConnectToRedis(ctx, config)
+	go storage.ConnectToRedis(ctx, config) //由ctx管理redis连接,而ctx的退出由优雅退出管理器负责
 }

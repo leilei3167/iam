@@ -91,7 +91,7 @@ func (s preparedPumpServer) Run(stopCh <-chan struct{}) error {
 
 // pump get authorization log from redis and write to pumps.
 func (s *pumpServer) pump() {
-	if err := s.mutex.Lock(); err != nil { // TODO:分布式锁?
+	if err := s.mutex.Lock(); err != nil { //分布式锁确保pump集群搭建时,同一时刻只有一个pump对Redis进行消费
 		log.Info("there is already an iam-pump instance running.")
 
 		return
@@ -112,20 +112,20 @@ func (s *pumpServer) pump() {
 
 	for i, v := range analyticsValues {
 		decoded := analytics.AnalyticsRecord{}
-		err := msgpack.Unmarshal([]byte(v.(string)), &decoded)
+		err := msgpack.Unmarshal([]byte(v.(string)), &decoded) //将获取到的数据解码
 		log.Debugf("Decoded Record: %v", decoded)
 		if err != nil {
 			log.Errorf("Couldn't unmarshal analytics data: %s", err.Error())
 		} else {
-			if s.omitDetails {
+			if s.omitDetails { //此处可对数据做处理,此处消除了敏感的数据
 				decoded.Policies = ""
 				decoded.Deciders = ""
 			}
-			keys[i] = interface{}(decoded)
+			keys[i] = interface{}(decoded) //转换为空接口类型 存入
 		}
 	}
 
-	// Send to pumps
+	// Send to pumps 将清洗后的数据异步写入到多个下游
 	writeToPumps(keys, s.secInterval)
 }
 
@@ -163,7 +163,7 @@ func writeToPumps(keys []interface{}, purgeDelay int) {
 	if pmps != nil {
 		var wg sync.WaitGroup
 		wg.Add(len(pmps))
-		for _, pmp := range pmps { // 发送至每个pump,对应多种下游
+		for _, pmp := range pmps { // 发送至每个pump,对应多种下游,异步的进行;同一份数据发往多个下游
 			go execPumpWriting(&wg, pmp, &keys, purgeDelay)
 		}
 		wg.Wait()
@@ -226,17 +226,17 @@ func execPumpWriting(wg *sync.WaitGroup, pmp pumps.Pump, keys *[]interface{}, pu
 	defer cancel()
 
 	go func(ch chan error, ctx context.Context, pmp pumps.Pump, keys *[]interface{}) {
-		filteredKeys := filterData(pmp, *keys)
+		filteredKeys := filterData(pmp, *keys) //过滤数据
 
 		ch <- pmp.WriteData(ctx, filteredKeys) // 异步调用写入数据
 	}(ch, ctx, pmp, keys)
 
 	select {
-	case err := <-ch:
+	case err := <-ch: //写入的结果,没有错误即成功,此协程退出
 		if err != nil {
 			log.Warnf("Error Writing to: %s - Error: %s", pmp.GetName(), err.Error())
 		}
-	case <-ctx.Done():
+	case <-ctx.Done(): //超时或者取消
 		//nolint: errorlint
 		switch ctx.Err() {
 		case context.Canceled:
