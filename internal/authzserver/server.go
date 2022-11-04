@@ -164,7 +164,7 @@ func (s *authzServer) initialize() error {
 	if s.analyticsOptions.Enable {
 		analyticsStore := storage.RedisCluster{
 			KeyPrefix: RedisKeyPrefix, //投入的key的前缀(和Pump中的一致)
-		}                                                                           // 设置key前缀;RedisCluster实现了AnalyticsHandler接口
+		} // 设置key前缀;RedisCluster实现了AnalyticsHandler接口
 		analyticsIns := analytics.NewAnalytics(s.analyticsOptions, &analyticsStore) // 创建数据上报服务
 		analyticsIns.Start()
 	}
