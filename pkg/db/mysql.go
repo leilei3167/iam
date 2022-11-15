@@ -36,7 +36,7 @@ func New(opts *Options) (*gorm.DB, error) {
 		true,
 		"Local")
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{ //使用自定义的logger 替换gorm中的logger
 		Logger: opts.Logger,
 	})
 	if err != nil {

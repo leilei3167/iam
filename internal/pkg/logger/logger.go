@@ -19,6 +19,12 @@ import (
 	"github.com/marmotedu/iam/pkg/log"
 )
 
+/*
+此处创建自定义的日志记录方式,来替换gorm自带的logger
+
+
+*/
+
 // Define colors.
 const (
 	Reset       = "\033[0m"
@@ -82,7 +88,7 @@ func New(level int) gormlogger.Interface {
 	}
 
 	return &logger{
-		Writer:       log.StdInfoLogger(),
+		Writer:       log.StdInfoLogger(), // 集成logger
 		Config:       config,
 		infoStr:      infoStr,
 		warnStr:      warnStr,
