@@ -30,7 +30,7 @@ pumps:
     type: mongo # pump 类型
     meta:
       collection_name: iam_analytics # mongodb collection name
-      mongo_url: mongodb://root:123456@127.0.0.1:27017/iam_analytics?authSource=admin # mongodb url
+      mongo_url: mongodb://root:123456@192.168.31.84/iam_analytics?authSource=admin # mongodb url
       collection_cap_max_size_bytes: 1048576 # 设置最大的capped collection
       collection_cap_enable: true
 

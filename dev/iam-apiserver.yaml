@@ -34,7 +34,7 @@ secure:
 
 # MySQL 数据库相关配置
 mysql:
-  host: 127.0.0.1:3306 # MySQL 机器 ip 和端口，默认 127.0.0.1:3306
+  host: 192.168.31.84:3306 # MySQL 机器 ip 和端口，默认 127.0.0.1:3306
   username: root # MySQL 用户名(建议授权最小权限集)
   password: 123456 # MySQL 用户密码
   database: iam # iam 系统所用的数据库名
@@ -45,7 +45,7 @@ mysql:
 
 # Redis 配置
 redis:
-  host: 127.0.0.1 # redis 地址，默认 127.0.0.1:6379
+  host: 192.168.31.84 # redis 地址，默认 127.0.0.1:6379
   port: 6379 # redis 端口，默认 6379
   password: 123456 # redis 密码
   #addrs:

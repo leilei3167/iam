@@ -34,7 +34,7 @@ secure:
 
 # Redis 配置
 redis:
-  host: 127.0.0.1 # redis 地址，默认 127.0.0.1:6379
+  host: 192.168.31.84 # redis 地址，默认 127.0.0.1:6379
   port: 6379 # redis 端口，默认 6379
   password: 123456 # redis 密码
   database: 0 # redis 数据库

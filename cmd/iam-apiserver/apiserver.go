@@ -12,8 +12,6 @@ import (
 
 	_ "go.uber.org/automaxprocs"
 
-	_ "go.uber.org/automaxprocs"
-
 	"github.com/marmotedu/iam/internal/apiserver"
 )
 
